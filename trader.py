@@ -4,14 +4,19 @@ from fractions import Fraction
 
 
 def integers(start=0, step=1):
-    """Enumerates positive integers."""
+    """Enumerates non-negative integers."""
     i = start
     while True:
         yield i
         i += step
 
-        
-def positive_rationals():
+def integer_vectors(length, start=0, step=1):
+    """Enumerates vectors of integers of the given length."""
+    for balls in integers():
+        yield from allocations_of(balls, length)
+
+
+def nonnegative_rationals():
     """Enumerates positive rationals."""
     yield Fraction(0, 1)  # zero is a special case that will not be yielded by the loop below
     for n in integers():
@@ -33,25 +38,13 @@ def allocations_of(balls, jars):
                 yield (i,) + sub
 
 
-def sequences_of(atoms):
-    """Enumerates all possible sequences of the elements in atoms (which
-    can itself be a never-ending generator)."""
-    cache = [next(atoms)]
-
-    def sequence_for(allocation):
-        for i in allocation:
-            yield cache[i]
-        while True:
-            yield cache[0]
-
-    # yield the initial "zero" sequence
-    yield sequence_for(())
-
-    # yield the rest of the sequences
-    for i in integers(1):
-        cache.append(next(atoms))
-        for allocation in allocations_of(i, i):
-            yield sequence_for(allocation)
+def product(atoms, length):
+    """Enumerates the cartesian product of atoms with itself N times."""
+    cache = []
+    for i, atom in enumerate(atoms):
+        cache.append(atom)
+        for js in allocations_of(i, length):
+            yield tuple(list(cache[j] for j in js))
 
 
 class ConstantFeature(object):
@@ -200,7 +193,7 @@ def expressible_features(num_days):
     cache = []
 
     def impl():
-        rats = positive_rationals()
+        rats = nonnegative_rationals()
         sentences = integers(start=1)
         while True:
             # shallow-copy the cache
@@ -255,7 +248,7 @@ def main_allocations():
 
 
 def main_rationals():
-    for q in itertools.islice(positive_rationals(), 0, 20):
+    for q in itertools.islice(nonnegative_rationals(), 0, 20):
         print(q)
 
         
