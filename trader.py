@@ -10,10 +10,18 @@ def integers(start=0, step=1):
         yield i
         i += step
 
+
 def integer_vectors(length, start=0, step=1):
     """Enumerates vectors of integers of the given length."""
     for balls in integers():
         yield from allocations_of(balls, length)
+
+
+def rationals_between(a, b):
+    """Enumerate rationals between the given lower and upper bounds."""
+    for denom in integers(start=1):
+        for numer in range(0, denom+1):
+            yield a + (b-a) * Fraction(numer, denom)
 
 
 def nonnegative_rationals():
@@ -99,7 +107,7 @@ class SumFeature(object):
         self.b = b
 
     def evaluate(self, market):
-        return self.a.evalaute(market) + self.b.evaluate(market)
+        return self.a.evaluate(market) + self.b.evaluate(market)
 
     def bound(self):
         return self.a.bound() + self.b.bound()
@@ -128,7 +136,7 @@ class ProductFeature(object):
         self.b = b
 
     def evaluate(self, market):
-        return self.a.evalaute(market) * self.b.evaluate(market)
+        return self.a.evaluate(market) * self.b.evaluate(market)
 
     def bound(self):
         return self.a.bound() * self.b.bound()
@@ -151,7 +159,7 @@ class MaxFeature(object):
         self.b = b
 
     def evaluate(self, market):
-        return max(self.a.evalaute(market) + self.b.evaluate(market))
+        return max(self.a.evaluate(market), self.b.evaluate(market))
 
     def bound(self):
         return max(self.a.bound(), self.b.bound())
@@ -172,7 +180,7 @@ class SafeReciprocalFeature(object):
         self.a = a
 
     def evaluate(self, market):
-        return 1. / max(1., self.a.evalaute(market))
+        return 1. / max(1., self.a.evaluate(market))
 
     def bound(self):
         return 1.  # the denominator is always >= 1, so the result is always <= 1

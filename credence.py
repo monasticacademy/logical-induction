@@ -12,3 +12,6 @@ class History(object):
     def price(self, sentence):
         """Price gets the current price for the given sentence."""
         return self._credences[-1].get(sentence, 0.)
+
+    def with_next_update(self, next_credences):
+        return History(self._credences + [next_credences])
