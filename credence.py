@@ -1,6 +1,8 @@
 
 
 class History(object):
+    """Represents a sequence of belief states."""
+
     def __init__(self, credences):
         self._credences = credences
 

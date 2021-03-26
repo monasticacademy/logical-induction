@@ -1,6 +1,6 @@
 import credence
 import trader
-import marketmaker
+import logical_inductor
 
 from nose.tools import assert_equal, assert_almost_equal
 
@@ -15,7 +15,7 @@ def test_evaluate():
         1: trader.PriceFeature(1, 2),   # purchase tokens for sentence 1 in quantity equal to the credence for sentence 1 after the second update
         2: trader.PriceFeature(2, 3),   # purchase tokens for sentence 2 in quantity equal to the credence for sentence 2 after the third update
     }
-    value = marketmaker.evaluate(trading_formulas, credence_history, world)
+    value = logical_inductor.evaluate(trading_formulas, credence_history, world)
     expected_value = .7 * (1 - .8) + .1 * (0 - .1)
     assert_equal(value, expected_value)
 
@@ -25,7 +25,7 @@ def test_find_credences_trivial():
     trading_formulas = {
         1: trader.PriceFeature(1, 1),   # purchase tokens for sentence 1 in quantity equal to the credence for sentence 1 after the first update
     }
-    new_credences = marketmaker.find_credences(trading_formulas, credence_history, 0.5)
+    new_credences = logical_inductor.find_credences(trading_formulas, credence_history, 0.5)
     assert_equal(new_credences[1], 0)
 
 
@@ -40,7 +40,7 @@ def test_find_credences_single():
                 trader.PriceFeature(1, 1))),
     }
 
-    new_credences = marketmaker.find_credences(trading_formulas, credence_history, 1e-5)
+    new_credences = logical_inductor.find_credences(trading_formulas, credence_history, 1e-5)
 
     # setting credence to 1/3 yields a trade quantity of zero, which satisfies
     assert_almost_equal(new_credences[1], 1/3)
@@ -64,7 +64,7 @@ def test_find_credences_multiple():
                     trader.PriceFeature(2, 1))))
     }
 
-    new_credences = marketmaker.find_credences(trading_formulas, credence_history, 1e-5)
+    new_credences = logical_inductor.find_credences(trading_formulas, credence_history, 1e-5)
 
     # setting credence[1] to 1 and credence[2] to 0 satisfies the conditions
     assert_almost_equal(new_credences[1], 1)
