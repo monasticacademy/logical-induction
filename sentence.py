@@ -1,6 +1,7 @@
+from abc import ABC, abstractmethod
 
 
-def parethize(sentence):
+def parenthize(sentence):
     """Add parentheses around a sentence unless it is an atom."""
     if isinstance(sentence, Atom):
         return str(sentence)
@@ -8,13 +9,14 @@ def parethize(sentence):
         return "(" + str(sentence) + ")"
 
 
-class Sentence(object):
+class Sentence(ABC):
     """
     A sentence is a combination of atoms and logical connectives that evaluates
-    to true or false in a given world.
+    to true or false over a given set of base facts.
     """
-    def evaluate(self, world):
-        raise NotImplemented
+    @abstractmethod
+    def evaluate(self, base_facts):
+        pass
 
 
 class Atom(Sentence):
@@ -26,8 +28,8 @@ class Atom(Sentence):
     def __init__(self, label):
         self.label = label
 
-    def evaluate(self, world):
-        return world[self.label]
+    def evaluate(self, base_facts):
+        return base_facts[self.label]
 
     def atoms(self):
         return {self.label}
@@ -46,8 +48,8 @@ class Negation(Sentence):
     def __init__(self, inner):
         self.inner = inner
     
-    def evaluate(self, world):
-        return not self.inner.evaluate(world)
+    def evaluate(self, base_facts):
+        return not self.inner.evaluate(base_facts)
     
     def atoms(self):
         return self.inner.atoms()
@@ -66,8 +68,8 @@ class Disjunction(Sentence):
     def __init__(self, *disjuncts):
         self.disjuncts = disjuncts
     
-    def evaluate(self, world):
-        return any(term.evaluate(world) for term in self.disjunct)
+    def evaluate(self, base_facts):
+        return any(term.evaluate(base_facts) for term in self.disjuncts)
 
     def atoms(self):
         return set.union(*(term.atoms() for term in self.disjuncts))
@@ -86,8 +88,8 @@ class Conjunction(Sentence):
     def __init__(self, *conjuncts):
         self.conjuncts = conjuncts
     
-    def evaluate(self, world):
-        return all(term.evaluate(world) for term in self.conjuncts)
+    def evaluate(self, base_facts):
+        return all(term.evaluate(base_facts) for term in self.conjuncts)
 
     def atoms(self):
         return set.union(*(term.atoms() for term in self.conjuncts))
@@ -107,8 +109,8 @@ class Implication(Sentence):
         self.antecedent = antecedent
         self.consequent = consequent
     
-    def evaluate(self, world):
-        return not self.antecedent.evaluate(world) or self.consequent.evaluate(world)
+    def evaluate(self, base_facts):
+        return not self.antecedent.evaluate(base_facts) or self.consequent.evaluate(base_facts)
 
     def atoms(self):
         return set.union(self.antecedent.atoms(), self.consequent.atoms())

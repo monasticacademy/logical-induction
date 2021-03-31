@@ -1,11 +1,71 @@
+from abc import ABC, abstractmethod
+
+import credence
 
 
-class ConstantFeature(object):
-    """Represents an expressible feature that is a constant."""
+def multiply(xs):
+    """Compute the product of the elements of a list, or return None if the list
+    is empty."""
+    result = None
+    for x in xs:
+        if result is None:
+            result = x
+        else:
+            result *= x
+    return result
+
+
+def parenthize(formula):
+    """Add parentheses around a formula if it is a sum or product formula."""
+    if isinstance(formula, (SumFeature, ProductFeature)):
+        return "(" + str(formula) + ")"
+    else:
+        return str(formula)
+
+
+def maketree(parent_label, children):
+    """Construct a multi-line string representing the formula."""
+    s = parent_label
+    for child in children:
+        s += "\n. "
+        s += child.tree().replace("\n", "\n. ")
+    return s
+
+
+class Formula(ABC):
+    """
+    Formula represents a trading formula. It can be evaluated on a set of
+    credences, returning a number. It has an upper bounded, which is its
+    greatest possible magnitude (assuming credences are between 0 and 1). It has
+    a domain, which is the set of sentences upon whose credence it depends on. 
+    """
+    @abstractmethod
+    def evaluate(self, credence_history):
+        pass
+
+    @abstractmethod
+    def bound(self):
+        pass
+
+    @abstractmethod
+    def domain(self):
+        pass
+
+    @abstractmethod
+    def tree(self):
+        """Get a multi-line string representation of this formula."""
+        pass
+
+
+class ConstantFeature(Formula):
+    """
+    Represents a trading formula that is a constant.
+    """
     def __init__(self, k):
         self.k = k
 
-    def evaluate(self, market):
+    def evaluate(self, credence_history):
+        assert isinstance(credence_history, credence.History)
         return self.k
 
     def bound(self):
@@ -14,6 +74,9 @@ class ConstantFeature(object):
     def domain(self):
         return set()
 
+    def tree(self):
+        return "Constant({})".format(str(self.k))
+
     def __str__(self):
         return str(self.k)
 
@@ -21,21 +84,27 @@ class ConstantFeature(object):
         return str(self)
 
 
-class PriceFeature(object):
-    """Represents an expressible feature that looks up the price for a
-    given sentence on a given day."""
+class PriceFeature(Formula):
+    """
+    Represents a trading formula that looks up the price for a given sentence on
+    a given day.
+    """
     def __init__(self, sentence, day):
         self.sentence = sentence
         self.day = day
 
-    def evaluate(self, market):
-        return market.lookup(self.sentence, self.day)
+    def evaluate(self, credence_history):
+        assert isinstance(credence_history, credence.History)
+        return credence_history.lookup(self.sentence, self.day)
 
     def bound(self):
-        return 1.   # because markets are constrained to [0,1] prices
+        return 1.   # because credences are always between 0 and 1
 
     def domain(self):
         return {self.sentence}
+
+    def tree(self):
+        return "Price({}, {})".format(self.sentence, self.day)
 
     def __str__(self):
         return "price({}, {})".format(self.sentence, self.day)
@@ -44,97 +113,120 @@ class PriceFeature(object):
         return str(self)
 
 
-class SumFeature(object):
-    """Represents an expressible feature that is the sum of two
-    features."""
-    def __init__(self, a, b):
-        self.a = a
-        self.b = b
+class SumFeature(Formula):
+    """
+    Represents a trading formula that is the sum of some other formulas."""
+    def __init__(self, *terms):
+        self.terms = list(terms)
 
-    def evaluate(self, market):
-        return self.a.evaluate(market) + self.b.evaluate(market)
+    def evaluate(self, credence_history):
+        assert isinstance(credence_history, credence.History)
+        return sum(term.evaluate(credence_history) for term in self.terms)
 
     def bound(self):
-        return self.a.bound() + self.b.bound()
+        return sum(term.bound() for term in self.terms)
 
     def domain(self):
-        return self.a.domain().union(self.b.domain())
+        return set.union(*(term.domain() for term in self.terms))
+
+    def tree(self):
+        return maketree("Sum", self.terms)
 
     def __str__(self):
-        s = "{} + {}".format(str(self.a), str(self.b))
-        # we only need parentheses if one of the underlying features
-        # has a precedence higher than us, which in this simple
-        # language is only a product feature
-        if isinstance(self.a, ProductFeature) or isinstance(self.b, ProductFeature):
-            s = "(" + s + ")"
-        return s
+        # avoid unnecessary parentheses if there is only one term
+        if len(self.terms) == 1:
+            return str(self.terms[0])
+        else:
+            return " + ".join(parenthize(term) for term in self.terms)
 
     def __repr__(self):
         return str(self)
 
 
-class ProductFeature(object):
-    """Represents an expressible feature that is the product of two
-    features."""
-    def __init__(self, a, b):
-        self.a = a
-        self.b = b
+class ProductFeature(Formula):
+    """
+    Represents a trading formula that is the product of some other formulas.
+    """
+    def __init__(self, *terms):
+        self.terms = list(terms)
 
-    def evaluate(self, market):
-        return self.a.evaluate(market) * self.b.evaluate(market)
+    def evaluate(self, credence_history):
+        assert isinstance(credence_history, credence.History)
+        return multiply(term.evaluate(credence_history) for term in self.terms)
 
     def bound(self):
-        return self.a.bound() * self.b.bound()
+        # bounds are always >= 0 so we can multiply them safely
+        return multiply(term.bound() for term in self.terms)
 
     def domain(self):
-        return self.a.domain().union(self.b.domain())
+        return set.union(*(term.domain() for term in self.terms))
+
+    def tree(self):
+        return maketree("Product", self.terms)
 
     def __str__(self):
-        return "{} * {}".format(str(self.a), str(self.b))
+        # avoid unnecessary parentheses if there is only one term
+        if len(self.terms) == 1:
+            return str(self.terms[0])
+        else:
+            return " * ".join(parenthize(term) for term in self.terms)
 
     def __repr__(self):
         return str(self)
 
 
-class MaxFeature(object):
-    """Represents an expressible feature that is the max of two
-    features."""
-    def __init__(self, a, b):
-        self.a = a
-        self.b = b
+class MaxFeature(Formula):
+    """
+    Represents a trading formula that is the max of some other formulas.
+    """
+    def __init__(self, *terms):
+        self.terms = list(terms)
 
-    def evaluate(self, market):
-        return max(self.a.evaluate(market), self.b.evaluate(market))
+    def evaluate(self, credence_history):
+        assert isinstance(credence_history, credence.History)
+        return max(term.evaluate(credence_history) for term in self.terms)
 
     def bound(self):
-        return max(self.a.bound(), self.b.bound())
+        return max(term.bound() for term in self.terms)
 
     def domain(self):
-        return self.a.domain().union(self.b.domain())
+        return set.union(*(term.domain() for term in self.terms))
+
+    def tree(self):
+        return maketree("Max", self.terms)
 
     def __str__(self):
-        return "max({}, {})".format(str(self.a), str(self.b))
+        # avoid unnecessary parentheses if there is only one term
+        if len(self.terms) == 1:
+            return str(self.terms[0])
+        else:
+            s = ", ".join(str(term) for term in self.terms)
+            return "max({})".format(s)
 
     def __repr__(self):
         return str(self)
 
 
-class SafeReciprocalFeature(object):
+class SafeReciprocalFeature(Formula):
     """Represents an expressible feature: 1 / max(1, x)."""
-    def __init__(self, a):
-        self.a = a
+    def __init__(self, x):
+        self.x = x
 
-    def evaluate(self, market):
-        return 1. / max(1., self.a.evaluate(market))
+    def evaluate(self, credence_history):
+        assert isinstance(credence_history, credence.History)
+        return 1. / max(1., self.x.evaluate(credence_history))
 
     def bound(self):
         return 1.  # the denominator is always >= 1, so the result is always <= 1
 
     def domain(self):
-        return self.a.domain()
+        return self.x.domain()
+
+    def tree(self):
+        return maketree("SafeReciprocal", [self.x])
 
     def __str__(self):
-        return "safe_reciprocal({})".format(str(self.a))
+        return "safe_reciprocal({})".format(str(self.x))
 
     def __repr__(self):
         return str(self)

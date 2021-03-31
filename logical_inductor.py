@@ -1,14 +1,23 @@
+import itertools
+
 import enumerate
+import trader
 
 
 def union(sequences):
     """Compute the union of a sequence of sequences."""
-    return set.union(*(set(seq) for seq in sequences))
+    sets = list(set(seq) for seq in sequences)
+    if len(sets) == 0:
+        return set()
+    else:
+        return set.union(*(x for x in sets))
 
 
 def evaluate(trading_formulas, credence_history, world):
-    """Compute the value of the trades executed by trading_formulas in the given
-    world."""
+    """
+    Compute the value of the trades executed by trading_formulas in the given
+    world.
+    """
     value_of_holdings = 0
     for sentence, formula in trading_formulas.items():
         # compute the quantity of tokens purchased for this sentence 
@@ -16,28 +25,33 @@ def evaluate(trading_formulas, credence_history, world):
         # compute the price paid for those tokens
         price = credence_history.price(sentence)
         # compute the value of these tokens in the given world
-        value = float(world[sentence])
+        payout = float(world[sentence])
         # add the profit or loss to the net value
-        value_of_holdings += quantity * (value - price)
+        value_of_holdings += quantity * (payout - price)
 
     return value_of_holdings
 
 
 def find_credences(trading_formulas, credence_history, tolerance):
-    """Find a set of credences such that the value-of-holdings for the trades executed by
-    trading_formulas are not greater than tolerance in any world."""
+    """
+    Find a set of credences such that the value-of-holdings for the trades
+    executed by trading_formulas are not greater than tolerance in any world.
+    """
 
-    # compute the set of sentences over which we should search
-    support = sorted(union(formula.domain() for formula in trading_formulas.values()))
+    # compute the set of sentences upon whose truth value the net holdings of our trader depends
+    support = set(trading_formulas.keys())
+
+    # compute the set of sentences over which we should search for credences
+    search_domain = union(formula.domain() for formula in trading_formulas.values()).union(support)
 
     # brute force search over all rational-valued credences between 0 and 1
-    for cs in enumerate.product(enumerate.rationals_between(0, 1), len(support)):
-        next_credences = {sentence: credence for sentence, credence in zip(support, cs)}
-        h = credence_history.with_next_update(next_credences)
+    for cs in enumerate.product(enumerate.rationals_between(0, 1), len(search_domain)):
+        credences = {sentence: credence for sentence, credence in zip(support, cs)}
+        h = credence_history.with_next_update(credences)
 
         # check all possible worlds (all possible truth values for the support sentences)
         satisfied = True
-        for truth_values in enumerate.product([0, 1], len(support)):
+        for truth_values in itertools.product([0, 1], repeat=len(support)):
             world = {sentence: truth for sentence, truth in zip(support, truth_values)}
             value_of_holdings = evaluate(trading_formulas, h, world)
             if value_of_holdings > tolerance:
@@ -45,59 +59,177 @@ def find_credences(trading_formulas, credence_history, tolerance):
                 break
 
         if satisfied:
-            return next_credences
+            return credences
 
 
-def worlds_consistent_with(domain, observations):
+def worlds_consistent_with(observations, domain):
     """
-    Enumerate worlds propositionally consistent with the set of observations.
+    Enumerate worlds propositionally consistent with a set of observations.
 
-    The set of worlds considered is the set of possible assignments of truth values to the sentence in domain. 
+    The set of worlds considered is the set of possible assignments of truth
+    values to the sentence in domain. 
 
-    Each observation is a sentence in propositional logic, with atoms s1, ..., sn
+    Each observation is a sentence in propositional logic, with atoms s1, ...,
+    sn
 
     domain is a list of sentences
+    
     observations is a list of sentences
     """
     # just go over each possible world,
     # evaluate each sentence on each world
     # yield the worlds that are consistent
-    domain_atoms = sorted(union(sentence.atoms() for sentence in domain))
-    observation_atoms = sorted(union(sentence.atoms() for sentence in observations))
+    domain_atoms = union(sentence.atoms() for sentence in domain)
+    observation_atoms = union(sentence.atoms() for sentence in observations)
+    atoms = sorted(set.union(domain_atoms, observation_atoms))
     for truth_values in itertools.product((True, False), repeat=len(atoms)):
-        world = {atom: value for atom, value in zip(atoms, truth_values)}
-        if all(sentence.evaluate(world) for sentence in observations):
-            yield {sentence: sentence.evaluate(world) for sentence in domain}
+        base_facts = {atom: value for atom, value in zip(atoms, truth_values)}
+        if all(sentence.evaluate(base_facts) for sentence in observations):
+            yield {sentence: sentence.evaluate(base_facts) for sentence in domain}
 
 
-def budget_trader(budget, observation_history, trading_history, credence_history):
-    """Returns a weight for the most recent trading formula in
-    trading_history such the value of the trader's holdings will not
-    fall below the given budget in any world propositionally consistent with the
-    observed sentences.
+def compute_budget_factor(
+    budget,
+    observation_history,
+    next_observation,
+    trading_history,
+    next_trading_formulas,
+    credence_history):
+    """
+    Returns a trading formula representing a weight that can be multiplied with
+    each formula in next_trading_formulas in order to guarantee that the
+    trader's value-of-holdings will not fall below the given budget in any
+    world.
 
-    trading_history has one more entry than credence_history does
-    
-    observation_history has the same number of entries as trading_history."""
-    n = len(observation_history)
+    The worlds considered are those that are propositionally consistent with the
+    sentences in observation_history and next_observation.
+
+    The lists observation_history, trading_history, and credence_history all
+    have the same length.
+
+    next_observation is the most recently observed sentence.
+
+    next_trading_formulas is a list of (sentence, formula) pairs that will be
+    evaluated on whatever credences the logical inductor outputs when it updates
+    its credences in light of next_observation. We do not get to see these
+    credences when computing the budget factor because the budget factor is an
+    input to the process by which the logical inductor updates its credences.
+    """
+    assert budget > 0
+
+    history_length = len(observation_history)
 
     # compute the support for all trading formulas over all days
-    # support = union(formula.domain() for formula in trader for trader in trading_history)
+    support = union(set(trader.keys()) for trader in trading_history)
 
-    # for each day 1...n-1:
-        # Dm = union(observation_history[1:n-1])
-        # accumulated_value = 0
-        # for each world propositionally consistent with Dm:  (worlds are over support computed above)
-            # evaluate this trader on this world with credences up to current day
-            # add value-of-holdings from this day to accumulated_value, which is the accumulatation over all days
-            # if accumulated_value is above budget then return 0
-    
-    # Dn = union(observation_history)
-    # terms = []
-    # for each world propositionally consistent with Dn:  (worlds are over support computed above)
-        # compute prior-earnings = accumualted value for this trader in this world for days 1..n-1
-        # compute present-earnings for this trader in this world for day n AS A FUNCTION OF CREDENCES
-        # construct max(1, -present-earnings / (budget + prior_earnings)) AS A TRADING FORMULA
-        # add this trading formula to the list of terms
-    # weight = join the terms together as -max(-term for term in terms)
-    # return Product(formula, weight) for formula in present_formulas
+    # evaluate the "if" clause in (5.2.1)
+    for i in range(history_length):
+        observations_up_to_i = set(observation_history[:i+1])
+        # go over the worlds consistent with the first N observations
+        for world in worlds_consistent_with(observations_up_to_i, support):
+            # calculate the accumulated value of the trader up to update N
+            accumulated_value = 0
+            for cur_trading_formulas in trading_history[:i+1]:
+                accumulated_value += evaluate(cur_trading_formulas, credence_history, world)
+                if accumulated_value < -budget + 1e-7:
+                    # we have exceeded our budget on a previous update so we
+                    # have no more money to trade now
+                    return ConstantFeature(0)
+
+    # create a set of observations up to and including the most recent
+    observations = set(observation_history)
+    observations.add(next_observation)
+
+    # add atoms for next_trading_formula to the support set
+    support.update(set(next_trading_formulas.keys()))
+
+    # if we got this far then we have not already exceeded our budget, so now
+    # compute the budget factor
+    budget_divisors = []
+    for world in worlds_consistent_with(observations, support):
+        # compute our accumulated value in this world
+        accumulated_value = 0
+        for cur_trading_formulas in trading_history:
+            accumulated_value += evaluate(cur_trading_formulas, credence_history, world)
+
+        # the money we have left to trade now is our original budget, plus
+        # (resp. minus) any money we made (resp. lost) since the beginning of
+        # time
+        remaining_budget = budget + accumulated_value
+
+        # this value should be positive given the check that we did above
+        assert remaining_budget > 1e-8
+        remaining_budget_recip = 1. / remaining_budget
+
+        # construct a trading formula representing the value of
+        # next_trading_formulas in this world, as a function of the
+        # yet-to-be-determined credences for the latest update
+        value_of_holdings_terms = []
+        for sentence, trading_formula in next_trading_formulas.items():
+            # construct a trading formula that looks up the price of tokens for this sentence
+            price = trader.PriceFeature(sentence, history_length+1)
+
+            # construct a trading formula that computes the value that this
+            # sentence pays out in this world
+            payout = trader.ConstantFeature(float(world[sentence]))
+
+            # construct a trading formula that computes the net value of
+            # purchasing one token of this sentence, which is the payout from the
+            # token minus the price paid to purchase the token
+            value = trader.SumFeature(
+                payout,
+                trader.ProductFeature(
+                    trader.ConstantFeature(-1),
+                    price))
+
+            # construct a trading formula that multiplies the number of tokens that we
+            # purchase by their profitability
+            value_of_holdings_terms.append(trader.ProductFeature(
+                trading_formula,
+                value))
+
+        # construct a trading formula representing the value of the trades
+        # executed on this update in this world
+        value_of_holdings = trader.SumFeature(*value_of_holdings_terms)
+
+        # construct a trading formula representing the negation of the above
+        neg_value_of_holdings = trader.ProductFeature(
+            trader.ConstantFeature(-1),
+            value_of_holdings)
+
+        # construct a trading formula representing the value we would need to
+        # divide our trades by in this world in order to make sure we do not
+        # exceed our remaining budget
+        divisor_in_this_world = trader.ProductFeature(
+            trader.ConstantFeature(remaining_budget_recip),
+            neg_value_of_holdings)
+
+        # add the budget factor for this world to the list of terms
+        budget_divisors.append(divisor_in_this_world)    
+
+    # the final budget divisor is the max of all the possible budget divisors.
+    budget_divisor = trader.MaxFeature(*budget_divisors)
+
+    # now take the safe reciprocal of the divisor, which turns it into a
+    # multiplicative factor and also clips it to 1, so that we only scale
+    # traders down, not up. This is what we want because if a trader is below
+    # its budget then there is no need to scale it up until it uses all of its
+    # remaining budget.
+    budget_factor = trader.SafeReciprocalFeature(budget_divisor)
+
+    # and we are done!
+    return budget_factor
+
+    # in the paper, the computation above is written in (5.2.1) and in the proof
+    # of part 1 of (5.2.2) as 
+    #
+    #    infinum[1 / max(1, divisor)]
+    #
+    # where "infinum" is like "min" over an infinite set. But this is
+    # unnecessarily cumbersome and can be rewritten
+    #
+    #   1 / max(1, supremum(divisors))
+    #
+    # where supremum is like "max" over an infinite set. This is easier for us
+    # to represent in Trading Language since we have native support for max but
+    # not for min.
