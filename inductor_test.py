@@ -1,6 +1,6 @@
 from nose.tools import assert_equal, assert_almost_equal, assert_is_instance
 
-import trader
+import formula
 import credence
 import sentence
 import inductor
@@ -13,8 +13,8 @@ def test_evaluate():
         {1: .8, 2: .1, 3: .5, 4: .5},
     ])
     trading_formulas = {
-        1: trader.Price(1, 2),   # purchase tokens for sentence 1 in quantity equal to the credence for sentence 1 after the second update
-        2: trader.Price(2, 3),   # purchase tokens for sentence 2 in quantity equal to the credence for sentence 2 after the third update
+        1: formula.Price(1, 2),   # purchase tokens for sentence 1 in quantity equal to the credence for sentence 1 after the second update
+        2: formula.Price(2, 3),   # purchase tokens for sentence 2 in quantity equal to the credence for sentence 2 after the third update
     }
     value = inductor.evaluate(trading_formulas, credence_history, world)
     expected_value = .7 * (1 - .8) + .1 * (0 - .1)
@@ -24,7 +24,7 @@ def test_evaluate():
 def test_find_credences_trivial():
     credence_history = credence.History([])  # empty history
     trading_formulas = {
-        1: trader.Price(1, 1),   # purchase tokens for sentence 1 in quantity equal to the credence for sentence 1 after the first update
+        1: formula.Price(1, 1),   # purchase tokens for sentence 1 in quantity equal to the credence for sentence 1 after the first update
     }
     new_credences = inductor.find_credences(trading_formulas, credence_history, 0.5)
     assert_equal(new_credences[1], 0)
@@ -34,11 +34,11 @@ def test_find_credences_single():
     credence_history = credence.History([])  # empty history
     trading_formulas = {
         # purchase sentence 1 in quantity 1 - 3 * credence
-        1: trader.Sum(
-            trader.Constant(1),
-            trader.Product(
-                trader.Constant(-3),
-                trader.Price(1, 1))),
+        1: formula.Sum(
+            formula.Constant(1),
+            formula.Product(
+                formula.Constant(-3),
+                formula.Price(1, 1))),
     }
 
     new_credences = inductor.find_credences(trading_formulas, credence_history, 1e-5)
@@ -50,19 +50,19 @@ def test_find_credences_multiple():
     credence_history = credence.History([])  # empty history; we are on the first update
     trading_formulas = {
         # purchase sentence 1 in quantity max(credence-of-sentence-1, credence-of-sentence-2)
-        1: trader.Max(
-            trader.Price(1, 1),
-            trader.Price(2, 1)),
+        1: formula.Max(
+            formula.Price(1, 1),
+            formula.Price(2, 1)),
         # purchase sentence 2 in quantity 1 - credence-of-sentence-1 - credence-of-sentence-2
-        2: trader.Sum(
-            trader.Constant(1),
-            trader.Sum(
-                trader.Product(
-                    trader.Constant(-1),
-                    trader.Price(1, 1)),
-                trader.Product(
-                    trader.Constant(-1),
-                    trader.Price(2, 1))))
+        2: formula.Sum(
+            formula.Constant(1),
+            formula.Sum(
+                formula.Product(
+                    formula.Constant(-1),
+                    formula.Price(1, 1)),
+                formula.Product(
+                    formula.Constant(-1),
+                    formula.Price(2, 1))))
     }
 
     new_credences = inductor.find_credences(trading_formulas, credence_history, 1e-5)
@@ -85,7 +85,7 @@ def test_compute_budget_factor_simple():
 
     # our trading formula says to always purchase 10 tokens of phi
     latest_trading_formulas = {
-        phi: trader.Constant(10),
+        phi: formula.Constant(10),
     }
 
     # our budget is $2, which means we can lose up to $2, or, in other words,
@@ -101,7 +101,7 @@ def test_compute_budget_factor_simple():
         latest_trading_formulas,
         past_credences)
 
-    assert_is_instance(budget_factor, trader.SafeReciprocal)
+    assert_is_instance(budget_factor, formula.SafeReciprocal)
     
     # our world consists of only one base fact (phi), and we observed phi, so
     # the world where phi=true is only one world propositionally consistent with
@@ -130,7 +130,7 @@ def test_compute_budget_factor_two_base_facts():
 
     # our trading formula says to always purchase 10 tokens of phi
     latest_trading_formulas = {
-        phi: trader.Constant(10),
+        phi: formula.Constant(10),
     }
 
     # our budget is $2, which means we can lose up to $2, or, in other words,
@@ -146,7 +146,7 @@ def test_compute_budget_factor_two_base_facts():
         latest_trading_formulas,
         past_credences)
 
-    assert_is_instance(budget_factor, trader.SafeReciprocal)
+    assert_is_instance(budget_factor, formula.SafeReciprocal)
 
     print()
     print(budget_factor.tree())
@@ -199,7 +199,7 @@ def test_compute_budget_factor_already_overran_budget():
 
     # on the previous update we purchased one token of psi
     past_trading_formulas = [{
-        psi: trader.Constant(10),
+        psi: formula.Constant(10),
     }]
 
     # we observe psi in our most recent update
@@ -207,7 +207,7 @@ def test_compute_budget_factor_already_overran_budget():
 
     # our trading formula says to always purchase 10 tokens of phi
     latest_trading_formulas = {
-        phi: trader.Constant(10),
+        phi: formula.Constant(10),
     }
 
     # our budget is $2, which means we can lose up to $2, or, in other words,
@@ -228,5 +228,5 @@ def test_compute_budget_factor_already_overran_budget():
     # which case we would have lost $7, which is more than our budget of $2, so
     # our budget factor should be the constant 0 which eliminates all further
     # trading
-    assert_is_instance(budget_factor, trader.Constant)
+    assert_is_instance(budget_factor, formula.Constant)
     assert_equal(budget_factor.k, 0)

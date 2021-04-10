@@ -1,7 +1,7 @@
 import itertools
 
 import enumerator
-import trader
+import formula
 
 
 def union(sequences):
@@ -117,7 +117,7 @@ def compute_budget_factor(
     history_length = len(observation_history)
 
     # compute the support for all trading formulas over all days
-    support = union(set(trader.keys()) for trader in trading_history)
+    support = union(set(trading_formulas.keys()) for trading_formulas in trading_history)
 
     # evaluate the "if" clause in (5.2.1)
     for i in range(history_length):
@@ -131,7 +131,7 @@ def compute_budget_factor(
                 if accumulated_value < -budget + 1e-7:
                     # we have exceeded our budget on a previous update so we
                     # have no more money to trade now
-                    return trader.Constant(0)
+                    return formula.Constant(0)
 
     # create a set of observations up to and including the most recent
     observations = set(observation_history)
@@ -164,55 +164,55 @@ def compute_budget_factor(
         value_of_holdings_terms = []
         for sentence, trading_formula in next_trading_formulas.items():
             # construct a trading formula that looks up the price of tokens for this sentence
-            price = trader.Price(sentence, history_length+1)
+            price = formula.Price(sentence, history_length+1)
 
             # construct a trading formula that computes the value that this
             # sentence pays out in this world
-            payout = trader.Constant(float(world[sentence]))
+            payout = formula.Constant(float(world[sentence]))
 
             # construct a trading formula that computes the net value of
             # purchasing one token of this sentence, which is the payout from the
             # token minus the price paid to purchase the token
-            value = trader.Sum(
+            value = formula.Sum(
                 payout,
-                trader.Product(
-                    trader.Constant(-1),
+                formula.Product(
+                    formula.Constant(-1),
                     price))
 
             # construct a trading formula that multiplies the number of tokens that we
             # purchase by their profitability
-            value_of_holdings_terms.append(trader.Product(
+            value_of_holdings_terms.append(formula.Product(
                 trading_formula,
                 value))
 
         # construct a trading formula representing the value of the trades
         # executed on this update in this world
-        value_of_holdings = trader.Sum(*value_of_holdings_terms)
+        value_of_holdings = formula.Sum(*value_of_holdings_terms)
 
         # construct a trading formula representing the negation of the above
-        neg_value_of_holdings = trader.Product(
-            trader.Constant(-1),
+        neg_value_of_holdings = formula.Product(
+            formula.Constant(-1),
             value_of_holdings)
 
         # construct a trading formula representing the value we would need to
         # divide our trades by in this world in order to make sure we do not
         # exceed our remaining budget
-        divisor_in_this_world = trader.Product(
-            trader.Constant(remaining_budget_recip),
+        divisor_in_this_world = formula.Product(
+            formula.Constant(remaining_budget_recip),
             neg_value_of_holdings)
 
         # add the budget factor for this world to the list of terms
         budget_divisors.append(divisor_in_this_world)    
 
     # the final budget divisor is the max of all the possible budget divisors.
-    budget_divisor = trader.Max(*budget_divisors)
+    budget_divisor = formula.Max(*budget_divisors)
 
     # now take the safe reciprocal of the divisor, which turns it into a
     # multiplicative factor and also clips it to 1, so that we only scale
     # traders down, not up. This is what we want because if a trader is below
     # its budget then there is no need to scale it up until it uses all of its
     # remaining budget.
-    budget_factor = trader.SafeReciprocal(budget_divisor)
+    budget_factor = formula.SafeReciprocal(budget_divisor)
 
     # and we are done!
     return budget_factor
@@ -300,21 +300,21 @@ def trading_firm(credence_history, observation_history, trading_algorithms):
 
             for sentence, trading_expr in trading_history[-1].items():
                 weight = 2 ** (-k - budget)
-                terms_by_sentence[sentence].append(trader.Product(
-                    trader.Constant(weight),
+                terms_by_sentence[sentence].append(formula.Product(
+                    formula.Constant(weight),
                     budget_factor,
                     trading_expr))
 
         for sentence, trading_expr in trading_history[-1].items():
             weight = 2 ** (-k - net_value_bound)
-            terms_by_sentence[sentence].append(trader.Product(
-                trader.Constant(weight),
+            terms_by_sentence[sentence].append(formula.Product(
+                formula.Constant(weight),
                 trading_expr))
 
     # create a trading formula for each sentence that is a sum of the terms
     # computed above
     final_trading_formula = {
-        sentence: trader.Sum(*terms)
+        sentence: formula.Sum(*terms)
         for sentence, terms in terms_by_sentence.items()
     }
 
