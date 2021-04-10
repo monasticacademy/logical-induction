@@ -1,6 +1,6 @@
 import itertools
 
-import enumerate
+import enumerator
 import trader
 
 
@@ -45,7 +45,7 @@ def find_credences(trading_formulas, credence_history, tolerance):
     search_domain = union(formula.domain() for formula in trading_formulas.values()).union(support)
 
     # brute force search over all rational-valued credences between 0 and 1
-    for cs in enumerate.product(enumerate.rationals_between(0, 1), len(search_domain)):
+    for cs in enumerator.product(enumerator.rationals_between(0, 1), len(search_domain)):
         credences = {sentence: credence for sentence, credence in zip(support, cs)}
         h = credence_history.with_next_update(credences)
 
@@ -253,9 +253,9 @@ def trading_firm(credence_history, observation_history, trading_algorithms):
 
     # evaluate the first N traders, zeroing out the first K elements of each
     trading_histories = []
-    for k, ta in __builtins__.enumerate(trading_algorithms):
+    for k, ta in enumerate(trading_algorithms):
         trading_history = []
-        for i, trading_formula in __builtins__.enumerate(itertools.islice(ta, 0, n)):
+        for i, trading_formula in enumerate(itertools.islice(ta, 0, n)):
             if i < k:
                 trading_history.append({})
             else:
@@ -266,7 +266,7 @@ def trading_firm(credence_history, observation_history, trading_algorithms):
     # compute the terms that should be added together to produce the final
     # trading formula
     terms_by_sentence = collections.defaultdict(list)
-    for k, trading_history in __builtins__.enumerate(trading_histories):  # this is the loop over \Sum_{k<=n}
+    for k, trading_history in enumerate(trading_histories):  # this is the loop over \Sum_{k<=n}
         # compute an upper bound on the net value for this trading history
         net_value_bound = 0
         for trading_formula in trading_history:
