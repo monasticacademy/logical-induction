@@ -76,9 +76,6 @@ def worlds_consistent_with(observations, domain):
     
     observations is a list of sentences
     """
-    # just go over each possible world,
-    # evaluate each sentence on each world
-    # yield the worlds that are consistent
     domain_atoms = union(sentence.atoms() for sentence in domain)
     observation_atoms = union(sentence.atoms() for sentence in observations)
     atoms = sorted(set.union(domain_atoms, observation_atoms))
@@ -134,7 +131,7 @@ def compute_budget_factor(
                 if accumulated_value < -budget + 1e-7:
                     # we have exceeded our budget on a previous update so we
                     # have no more money to trade now
-                    return ConstantFeature(0)
+                    return trader.ConstantFeature(0)
 
     # create a set of observations up to and including the most recent
     observations = set(observation_history)
@@ -233,3 +230,83 @@ def compute_budget_factor(
     # where supremum is like "max" over an infinite set. This is easier for us
     # to represent in Trading Language since we have native support for max but
     # not for min.
+
+
+def trading_firm(credence_history, observation_history, trading_algorithms):
+    """
+    Given:
+     * A sequence of N-1 belief states (credence_history)
+     * A sequence of N sentences (observation_history)
+     * A sequence of N generators over trading formulas (trading_algorithms)
+
+    Compute a trading formula for day N that incorporates the wisdom from the N
+    trading algorithms as a single formula. The returned trading formula
+    exploits any market that any of the N constituent trading algorithms
+    exploits.
+
+    This function implements TradingFirm as defined in 5.3.2 in the logical
+    induction paper.
+    """
+    n = len(credence_history) + 1
+    assert len(observation_history) == n
+    assert len(trading_algorithms) == n
+
+    # evaluate the first N traders, zeroing out the first K elements of each
+    trading_histories = []
+    for k, ta in __builtins__.enumerate(trading_algorithms):
+        trading_history = []
+        for i, trading_formula in __builtins__.enumerate(itertools.islice(ta, 0, n)):
+            if i < k:
+                trading_history.append({})
+            else:
+                trading_history.append(trading_formula)
+        
+        trading_histories.append(trading_history)
+
+    # compute the terms that should be added together to produce the final
+    # trading formula
+    terms_by_sentence = collections.defaultdict(list)
+    for k, trading_history in __builtins__.enumerate(trading_histories):  # this is the loop over \Sum_{k<=n}
+        # compute an upper bound on the net value for this trading history
+        net_value_bound = 0
+        for trading_formula in trading_history:
+            for sentence, trading_expr in trading_formula.items():
+                # TODO: where does this 2 come from? (see last para of proof of 5.3.2)
+                net_value_bound += 2 * trading_expr.bound()
+
+        net_value_bound = math.ceil(net_value_bound)
+
+        # TODO: we can compute a better bound by using the N-1 belief states
+        # that we have already observed in credence_history
+
+        for budget in range(net_value_bound):
+            budget_factor = compute_budget_factor(
+                budget,
+                observation_history[:-1],
+                observation_history[-1],
+                trading_history[:-1],
+                trading_history[-1],
+                credence_history)
+
+
+            for sentence, trading_expr in trading_history[-1].items():
+                weight = 2 ** (-k - budget)
+                terms_by_sentence[sentence].append(trader.ProductFeature(
+                    weight,
+                    budget,
+                    trading_expr))
+
+        for sentence, trading_expr in trading_history[-1].items():
+            weight = 2 ** (-k - net_value_bound)
+            terms_by_sentence[sentence].append(trader.ProductFeature(
+                weight,
+                trading_expr))
+
+    final_trading_formula = {}
+    for sentence, terms in terms_by_sentence.items():
+        final_trading_formula[sentence] = trader.SumFeature(*terms)
+
+    return final_trading_formula
+
+    
+

@@ -37,23 +37,36 @@ class Formula(ABC):
     Formula represents a trading formula. It can be evaluated on a set of
     credences, returning a number. It has an upper bounded, which is its
     greatest possible magnitude (assuming credences are between 0 and 1). It has
-    a domain, which is the set of sentences upon whose credence it depends on. 
+    a domain, which is the set of sentences upon whose credence it depends.
     """
     @abstractmethod
     def evaluate(self, credence_history):
+        """
+        Evaluate this formula on the given credence history, returning a number.
+        """
         pass
 
     @abstractmethod
     def bound(self):
+        """
+        Get an upper bound on the absolute value of evaluate() for any
+        credence history with credences between 0 and 1.
+        """
         pass
 
     @abstractmethod
     def domain(self):
+        """
+        Get a set containing the sentences whose price will be used in the
+        evaluation of this formula.
+        """
         pass
 
     @abstractmethod
     def tree(self):
-        """Get a multi-line string representation of this formula."""
+        """
+        Get a multi-line string representation of this formula.
+        """
         pass
 
 
@@ -98,7 +111,7 @@ class PriceFeature(Formula):
         return credence_history.lookup(self.sentence, self.day)
 
     def bound(self):
-        return 1.   # because credences are always between 0 and 1
+        return 1   # because credences are always between 0 and 1
 
     def domain(self):
         return {self.sentence}

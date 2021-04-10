@@ -1,9 +1,9 @@
+from nose.tools import assert_equal, assert_almost_equal, assert_is_instance
+
 import trader
 import credence
 import sentence
 import logical_inductor
-
-from nose.tools import assert_equal, assert_almost_equal, assert_is_instance
 
 def test_evaluate():
     world = {1: True, 2: False, 3: False}
@@ -117,10 +117,8 @@ def test_compute_budget_factor_simple():
 
 
 def test_compute_budget_factor_two_base_facts():
-    #phi = sentence.Atom("ϕ")
-    #psi = sentence.Atom("Ψ")
-    phi = sentence.Atom("PHI")
-    psi = sentence.Atom("PSI")
+    phi = sentence.Atom("ϕ")
+    psi = sentence.Atom("Ψ")
 
     # we are on the first update; our history is all empty
     past_credences = credence.History([])  # no past credences
@@ -153,16 +151,16 @@ def test_compute_budget_factor_two_base_facts():
     print()
     print(budget_factor.tree())
     
-    # Our world consists of two base facts (phi and psi), and we observed phi|psi, so
-    # the three worlds consistent with this observation are:
+    # Our world consists of two base facts, phi and psi, and we observed "phi OR psi", so
+    # there are three worlds consistent with this observation:
     #   phi=True   psi=True
     #   phi=True   psi=False
     #   phi=False  psi=True
     #
     # Our trading formula says to purchase 10 tokens of phi no matter what. This
     # could cost us between $0 and $10 depending on the credence for phi. The
-    # value of these 10 tokens could turn out to be either $0 or $10 depending
-    # on which of the above three worlds we are in: 
+    # value of these 10 tokens could turn out to be either $0 if phi=False or $10
+    # if phi=True:
     #   phi=True   psi=True    -> value of 10 tokens of phi = $10, so net worth between $0 and $10
     #   phi=True   psi=False   -> value of 10 tokens of phi = $10, so net worth between $0 and $10
     #   phi=False  psi=True    -> value of 10 tokens of phi = $0, so net worth between -$10 and $0
@@ -185,3 +183,50 @@ def test_compute_budget_factor_two_base_facts():
     # if the credence for phi were 0 then in the third world we would end up with a
     # net worth of $0, which is above budget, so our scaling factor should be 1
     assert_almost_equal(budget_factor.evaluate(past_credences.with_next_update({phi: 0.})), 1.)
+
+def test_compute_budget_factor_already_overran_budget():
+    phi = sentence.Atom("ϕ")
+    psi = sentence.Atom("Ψ")
+
+    # there was one previous observation, which was "phi OR psi"
+    past_observations = [sentence.Disjunction(phi, psi)]
+
+    # on our one previous update, our credences were as follows
+    past_credences = credence.History([{
+        phi: .6,
+        psi: .7,
+    }])
+
+    # on the previous update we purchased one token of psi
+    past_trading_formulas = [{
+        psi: trader.ConstantFeature(10),
+    }]
+
+    # we observe psi in our most recent update
+    latest_observation = sentence.Disjunction(phi, psi)
+
+    # our trading formula says to always purchase 10 tokens of phi
+    latest_trading_formulas = {
+        phi: trader.ConstantFeature(10),
+    }
+
+    # our budget is $2, which means we can lose up to $2, or, in other words,
+    # the value of our holdings is allowed to go as low as -$2
+    budget = 2
+
+    # compute the budget factor
+    budget_factor = logical_inductor.compute_budget_factor(
+        budget,
+        past_observations,
+        latest_observation,
+        past_trading_formulas,
+        latest_trading_formulas,
+        past_credences)
+
+    # on our previous update we purchased one token of PSI for $7 without being
+    # able to rule out the possibility that PHI could turn out to be false, in
+    # which case we would have lost $7, which is more than our budget of $2, so
+    # our budget factor should be the constant 0 which eliminates all further
+    # trading
+    assert_is_instance(budget_factor, trader.ConstantFeature)
+    assert_equal(budget_factor.k, 0)
