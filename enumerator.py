@@ -67,24 +67,24 @@ def expressible_features(num_days):
             cur_cache = [ef for ef in cache]
 
             # add a constant feature (positive and negative)
-            yield ConstantFeature(next(rats))
-            yield ConstantFeature(-next(rats))
+            yield Constant(next(rats))
+            yield Constant(-next(rats))
 
             # add a round of price features
             sentence = next(sentences)
             for day in range(num_days):
-                yield PriceFeature(sentence, day)
+                yield Price(sentence, day)
 
             # add reciprocals for each of the base features
             for ftr in cur_cache:
-                yield SafeReciprocalFeature(ftr)
+                yield SafeReciprocal(ftr)
 
             # add sum, product, and max features for each pair of base features
             for a in cur_cache:
                 for b in cur_cache:
-                    yield SumFeature(a, b)
-                    yield ProductFeature(a, b)
-                    yield MaxFeature(a, b)
+                    yield Sum(a, b)
+                    yield Product(a, b)
+                    yield Max(a, b)
 
     for ftr in impl():
         cache.append(ftr)

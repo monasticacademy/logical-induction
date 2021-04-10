@@ -17,7 +17,7 @@ def multiply(xs):
 
 def parenthize(formula):
     """Add parentheses around a formula if it is a sum or product formula."""
-    if isinstance(formula, (SumFeature, ProductFeature)):
+    if isinstance(formula, (Sum, Product)):
         return "(" + str(formula) + ")"
     else:
         return str(formula)
@@ -70,7 +70,7 @@ class Formula(ABC):
         pass
 
 
-class ConstantFeature(Formula):
+class Constant(Formula):
     """
     Represents a trading formula that is a constant.
     """
@@ -97,7 +97,7 @@ class ConstantFeature(Formula):
         return str(self)
 
 
-class PriceFeature(Formula):
+class Price(Formula):
     """
     Represents a trading formula that looks up the price for a given sentence on
     a given day.
@@ -126,7 +126,7 @@ class PriceFeature(Formula):
         return str(self)
 
 
-class SumFeature(Formula):
+class Sum(Formula):
     """
     Represents a trading formula that is the sum of some other formulas."""
     def __init__(self, *terms):
@@ -156,7 +156,7 @@ class SumFeature(Formula):
         return str(self)
 
 
-class ProductFeature(Formula):
+class Product(Formula):
     """
     Represents a trading formula that is the product of some other formulas.
     """
@@ -188,7 +188,7 @@ class ProductFeature(Formula):
         return str(self)
 
 
-class MaxFeature(Formula):
+class Max(Formula):
     """
     Represents a trading formula that is the max of some other formulas.
     """
@@ -220,7 +220,7 @@ class MaxFeature(Formula):
         return str(self)
 
 
-class SafeReciprocalFeature(Formula):
+class SafeReciprocal(Formula):
     """Represents an expressible feature: 1 / max(1, x)."""
     def __init__(self, x):
         self.x = x
