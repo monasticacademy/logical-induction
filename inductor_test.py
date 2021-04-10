@@ -266,3 +266,24 @@ def test_combine_trading_algorithms_simple():
     assert_equal(len(compound_trader), 1)
     assert_is_instance(compound_trader[phi], formula.Sum)
     assert_equal(len(compound_trader[phi].terms), 3)
+
+
+def test_logical_inductor_simple():
+    phi = sentence.Atom("ϕ")
+    psi = sentence.Atom("Ψ")
+
+    # create a trading algorithm that purchases 1, 2, 3, ... tokens of phi
+    def trading_algorithm(sentence, start=1, step=1):
+        for quantity in enumerator.integers(start=start, step=step):
+            yield {sentence: formula.Constant(quantity)}
+
+    lia = inductor.LogicalInductor()
+
+    credences = lia.update(sentence.Negation(phi), trading_algorithm(phi, start=1, step=1))
+    print(credences)
+
+    credences = lia.update(psi, trading_algorithm(psi, start=-1, step=-1))
+    print(credences)
+
+    credences = lia.update(psi, trading_algorithm(psi, start=-1, step=-1))
+    print(credences)

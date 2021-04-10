@@ -4,6 +4,7 @@ import math
 
 import enumerator
 import formula
+import credence
 
 
 def union(sequences):
@@ -287,8 +288,6 @@ def combine_trading_algorithms(trading_algorithms, observation_history, credence
 
         net_value_bound = math.ceil(net_value_bound)
 
-        print("bound for algorithm {}: {}".format(k, net_value_bound))
-
         # TODO: we can compute a better bound by using the N-1 belief states
         # that we have already observed in credence_history
 
@@ -323,3 +322,52 @@ def combine_trading_algorithms(trading_algorithms, observation_history, credence
 
     
 
+class LogicalInductor(object):
+    def __init__(self):
+        self._trading_algorithms = []
+        self._trading_histories = []
+        self._observation_history = []
+        self._credence_history = credence.History()
+
+    def update(self, observation, trading_algorithm):
+        """
+        Given: 
+         * An observation
+         * A trading algorithm
+        Return:
+         * A belief state
+        
+        Implements the logical induction algorithm as per 5.4.1 in the paper
+        """
+
+        # add the observation to the list of historical observations
+        self._observation_history.append(observation)
+
+        # evaluate one more trading formula for each existing trading algorithm
+        for algorithm, history in zip(self._trading_algorithms, self._trading_histories):
+            history.append(next(algorithm))
+
+        # evaluate the first N trading formulas
+        trading_history = list(itertools.islice(trading_algorithm, len(self._observation_history)))
+
+        # add the new trading algorithm and its history to the list
+        self._trading_algorithms.append(trading_algorithm)
+        self._trading_histories.append(trading_history)
+
+        # assemble the compound trader
+        compound_formula = combine_trading_algorithms(
+            self._trading_algorithms,
+            self._observation_history,
+            self._credence_history)
+
+        # tolerances get tighter as we process more updates. TODO: use fractions rather than floating point arithmetic
+        tolerance = 2 ** -len(self._observation_history)
+
+        # find a set of credences not exploited by the compound trader
+        credences = find_credences(compound_formula, self._credence_history, tolerance)
+
+        # add these credences to the history
+        self._credence_history = self._credence_history.with_next_update(credences)
+
+        # return the credences
+        return credences

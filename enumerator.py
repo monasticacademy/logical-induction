@@ -95,7 +95,7 @@ def trading_strategies(num_days, num_sentences):
     """Enumerate trading strategies for day N with support for M
     sentences."""
     features = expressible_features(num_days)
-    for st in itertools.product(features, repeat=num_sentences):
+    for st in product(features, repeat=num_sentences):
         yield st
 
 
@@ -103,37 +103,6 @@ def traders():
     """Enumerate efficiently computable traders. An e.c. trader is a sequence of
     trading strategies in which the n-th element can be computed in time
     polynomial in n.
-    
-    For now we just return constant trading strategies.
-    
+        
     TODO: implement properly."""
     pass
-        
-def main_allocations():
-    for t in allocations_of(3, 3):
-        print(t)
-
-
-def main_rationals():
-    for q in itertools.islice(nonnegative_rationals(), 0, 20):
-        print(q)
-
-        
-def main_sequences_of():
-    for seq in itertools.islice(sequences_of(integers(0)), 0, 100):
-        print(list(itertools.islice(seq, 0, 10)))
-
-
-def main_expressible_features():
-    for ftr in itertools.islice(expressible_features(3), 0, 500):
-        print(ftr)
-
-
-def main():
-    #main_rationals()
-    main_expressible_features()
-    #main_sequences_of()
-
-        
-if __name__ == "__main__":
-    main()
