@@ -4,6 +4,15 @@ import formula
 import credence
 import sentence
 import inductor
+import enumerator
+
+
+def print_formulas(trading_formulas):
+    for sentence, formula in trading_formulas.items():
+        print(sentence)
+        print(formula.tree())
+        print()
+
 
 def test_evaluate():
     world = {1: True, 2: False, 3: False}
@@ -230,3 +239,30 @@ def test_compute_budget_factor_already_overran_budget():
     # trading
     assert_is_instance(budget_factor, formula.Constant)
     assert_equal(budget_factor.k, 0)
+
+
+def test_combine_trading_algorithms_simple():
+    phi = sentence.Atom("ϕ")
+    psi = sentence.Atom("Ψ")
+
+    # create a trading algorithm that purchases 1, 2, 3, ... tokens of phi
+    def trading_algorithm():
+        for quantity in enumerator.integers(start=1):
+            yield {phi: formula.Constant(quantity)}
+
+    # in this test we are on the first update, so there is one trading
+    # algorithm, one observation, and no historical credences
+    trading_algorithms = [trading_algorithm()]
+    observation_history = [psi]
+    credence_history = credence.History([])
+
+    # create the compound trader, which just has one internal trader
+    compound_trader = inductor.combine_trading_algorithms(
+        trading_algorithms,
+        observation_history,
+        credence_history,
+    )
+
+    assert_equal(len(compound_trader), 1)
+    assert_is_instance(compound_trader[phi], formula.Sum)
+    assert_equal(len(compound_trader[phi].terms), 3)

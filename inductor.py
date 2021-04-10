@@ -1,4 +1,6 @@
 import itertools
+import collections
+import math
 
 import enumerator
 import formula
@@ -232,17 +234,16 @@ def compute_budget_factor(
     # not for min.
 
 
-def trading_firm(credence_history, observation_history, trading_algorithms):
+def combine_trading_algorithms(trading_algorithms, observation_history, credence_history):
     """
     Given:
-     * A sequence of N-1 belief states (credence_history)
-     * A sequence of N sentences (observation_history)
      * A sequence of N generators over trading formulas (trading_algorithms)
-
-    Compute a trading formula for day N that incorporates the wisdom from the N
-    trading algorithms as a single formula. The returned trading formula
-    exploits any market that any of the N constituent trading algorithms
-    exploits.
+     * A sequence of N sentences (observation_history)
+     * A sequence of N-1 belief states (credence_history)
+    Returns:
+     * A single trading formula for day N that incorporates the wisdom from 
+       the N trading algorithms. The returned trading formula exploits any
+       market that any of the N constituent trading algorithms exploits.
 
     This function implements TradingFirm as defined in 5.3.2 in the logical
     induction paper.
@@ -286,10 +287,12 @@ def trading_firm(credence_history, observation_history, trading_algorithms):
 
         net_value_bound = math.ceil(net_value_bound)
 
+        print("bound for algorithm {}: {}".format(k, net_value_bound))
+
         # TODO: we can compute a better bound by using the N-1 belief states
         # that we have already observed in credence_history
 
-        for budget in range(net_value_bound):
+        for budget in range(1, net_value_bound+1):
             budget_factor = compute_budget_factor(
                 budget,
                 observation_history[:-1],
@@ -299,26 +302,24 @@ def trading_firm(credence_history, observation_history, trading_algorithms):
                 credence_history)
 
             for sentence, trading_expr in trading_history[-1].items():
-                weight = 2 ** (-k - budget)
+                weight = 2 ** (-k-1 - budget)
                 terms_by_sentence[sentence].append(formula.Product(
                     formula.Constant(weight),
                     budget_factor,
                     trading_expr))
 
         for sentence, trading_expr in trading_history[-1].items():
-            weight = 2 ** (-k - net_value_bound)
+            weight = 2 ** (-k-1 - net_value_bound)
             terms_by_sentence[sentence].append(formula.Product(
                 formula.Constant(weight),
                 trading_expr))
 
     # create a trading formula for each sentence that is a sum of the terms
     # computed above
-    final_trading_formula = {
+    return {
         sentence: formula.Sum(*terms)
         for sentence, terms in terms_by_sentence.items()
     }
-
-    return final_trading_formula
 
     
 

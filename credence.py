@@ -17,3 +17,6 @@ class History(object):
 
     def with_next_update(self, next_credences):
         return History(self._credences + [next_credences])
+
+    def __len__(self):
+        return len(self._credences)
