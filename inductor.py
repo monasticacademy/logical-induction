@@ -271,8 +271,18 @@ def trading_firm(credence_history, observation_history, trading_algorithms):
         net_value_bound = 0
         for trading_formula in trading_history:
             for sentence, trading_expr in trading_formula.items():
-                # TODO: where does this 2 come from? (see last para of proof of 5.3.2)
-                net_value_bound += 2 * trading_expr.bound()
+                # compute an upper bound on the absolute value of trading_expr,
+                # which is the quantity that we will purchase of this sentence
+                quantity_bound = trading_expr.bound()
+
+                # Let C = quantity_bound. We might spend up to $C purchasing
+                # these tokens, and they might later be worth up to $C, so their
+                # net value could be between -$C and $2C. We technically only
+                # need a lower bound for the sum below but here we follow the
+                # paper and compute a formal bound on the net value of this
+                # trade by including the constant 2 below. See the last
+                # paragraph of proof of 5.3.2 in the paper.
+                net_value_bound += 2 * quantity_bound
 
         net_value_bound = math.ceil(net_value_bound)
 
@@ -288,23 +298,25 @@ def trading_firm(credence_history, observation_history, trading_algorithms):
                 trading_history[-1],
                 credence_history)
 
-
             for sentence, trading_expr in trading_history[-1].items():
                 weight = 2 ** (-k - budget)
                 terms_by_sentence[sentence].append(trader.ProductFeature(
-                    weight,
-                    budget,
+                    trader.ConstantFeature(weight),
+                    budget_factor,
                     trading_expr))
 
         for sentence, trading_expr in trading_history[-1].items():
             weight = 2 ** (-k - net_value_bound)
             terms_by_sentence[sentence].append(trader.ProductFeature(
-                weight,
+                trader.ConstantFeature(weight),
                 trading_expr))
 
-    final_trading_formula = {}
-    for sentence, terms in terms_by_sentence.items():
-        final_trading_formula[sentence] = trader.SumFeature(*terms)
+    # create a trading formula for each sentence that is a sum of the terms
+    # computed above
+    final_trading_formula = {
+        sentence: trader.SumFeature(*terms)
+        for sentence, terms in terms_by_sentence.items()
+    }
 
     return final_trading_formula
 
