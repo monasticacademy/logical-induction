@@ -235,7 +235,7 @@ def compute_budget_factor(
     # not for min.
 
 
-def combine_trading_algorithms(trading_algorithms, observation_history, credence_history):
+def combine_trading_algorithms(trading_histories, observation_history, credence_history):
     """
     Given:
      * A sequence of N generators over trading formulas (trading_algorithms)
@@ -251,27 +251,23 @@ def combine_trading_algorithms(trading_algorithms, observation_history, credence
     """
     n = len(credence_history) + 1
     assert len(observation_history) == n
-    assert len(trading_algorithms) == n
-
-    # evaluate the first N traders, zeroing out the first K elements of each
-    trading_histories = []
-    for k, ta in enumerate(trading_algorithms):
-        trading_history = []
-        for i, trading_formula in enumerate(itertools.islice(ta, 0, n)):
-            if i < k:
-                trading_history.append({})
-            else:
-                trading_history.append(trading_formula)
-        
-        trading_histories.append(trading_history)
+    assert len(trading_histories) == n
 
     # compute the terms that should be added together to produce the final
     # trading formula
     terms_by_sentence = collections.defaultdict(list)
     for k, trading_history in enumerate(trading_histories):  # this is the loop over \Sum_{k<=n}
+        # zero out the first k entries
+        clipped_trading_history = []
+        for i, trading_formula in enumerate(trading_history):
+            if i < k:
+                clipped_trading_history.append({})
+            else:
+                clipped_trading_history.append(trading_formula)
+
         # compute an upper bound on the net value for this trading history
         net_value_bound = 0
-        for trading_formula in trading_history:
+        for trading_formula in clipped_trading_history:
             for sentence, trading_expr in trading_formula.items():
                 # compute an upper bound on the absolute value of trading_expr,
                 # which is the quantity that we will purchase of this sentence
@@ -296,18 +292,18 @@ def combine_trading_algorithms(trading_algorithms, observation_history, credence
                 budget,
                 observation_history[:-1],
                 observation_history[-1],
-                trading_history[:-1],
-                trading_history[-1],
+                clipped_trading_history[:-1],
+                clipped_trading_history[-1],
                 credence_history)
 
-            for sentence, trading_expr in trading_history[-1].items():
+            for sentence, trading_expr in clipped_trading_history[-1].items():
                 weight = 2 ** (-k-1 - budget)
                 terms_by_sentence[sentence].append(formula.Product(
                     formula.Constant(weight),
                     budget_factor,
                     trading_expr))
 
-        for sentence, trading_expr in trading_history[-1].items():
+        for sentence, trading_expr in clipped_trading_history[-1].items():
             weight = 2 ** (-k-1 - net_value_bound)
             terms_by_sentence[sentence].append(formula.Product(
                 formula.Constant(weight),
@@ -347,16 +343,16 @@ class LogicalInductor(object):
         for algorithm, history in zip(self._trading_algorithms, self._trading_histories):
             history.append(next(algorithm))
 
-        # evaluate the first N trading formulas
+        # evaluate the first N trading formulas for the new trading algorithm
         trading_history = list(itertools.islice(trading_algorithm, len(self._observation_history)))
 
         # add the new trading algorithm and its history to the list
         self._trading_algorithms.append(trading_algorithm)
         self._trading_histories.append(trading_history)
 
-        # assemble the compound trader
-        compound_formula = combine_trading_algorithms(
-            self._trading_algorithms,
+        # assemble the enemble trader
+        ensemble_formula = combine_trading_algorithms(
+            self._trading_histories,
             self._observation_history,
             self._credence_history)
 
@@ -364,7 +360,7 @@ class LogicalInductor(object):
         tolerance = 2 ** -len(self._observation_history)
 
         # find a set of credences not exploited by the compound trader
-        credences = find_credences(compound_formula, self._credence_history, tolerance)
+        credences = find_credences(ensemble_formula, self._credence_history, tolerance)
 
         # add these credences to the history
         self._credence_history = self._credence_history.with_next_update(credences)

@@ -75,7 +75,7 @@ class Disjunction(Sentence):
         return set.union(*(term.atoms() for term in self.disjuncts))
 
     def __str__(self):
-        return " ∨ ".join(parenthize(term) for term in self.disjuncts)
+        return " | ".join(parenthize(term) for term in self.disjuncts)
 
     def __repr__(self):
         return str(self)
@@ -95,7 +95,7 @@ class Conjunction(Sentence):
         return set.union(*(term.atoms() for term in self.conjuncts))
 
     def __str__(self):
-        return " ∧ ".join(parenthize(term) for term in self.conjuncts)
+        return " & ".join(parenthize(term) for term in self.conjuncts)
 
     def __repr__(self):
         return str(self)
