@@ -1,3 +1,5 @@
+![Continuous integration](https://github.com/alexflint/logical-induction/actions/workflows/integrate.yml/badge.svg)
+
 # Logical induction in Python
 
 This repository contains code to support the guide to logical induction for
