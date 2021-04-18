@@ -245,20 +245,16 @@ def test_combine_trading_algorithms_simple():
     phi = sentence.Atom("ϕ")
     psi = sentence.Atom("Ψ")
 
-    # create a trading algorithm that purchases 1, 2, 3, ... tokens of phi
-    def trading_algorithm():
-        for quantity in enumerator.integers(start=1):
-            yield {phi: formula.Constant(quantity)}
-
     # in this test we are on the first update, so there is one trading
     # algorithm, one observation, and no historical credences
-    trading_algorithms = [trading_algorithm()]
+    trading_formula = {phi: formula.Constant(1)}
+    trading_histories = [[trading_formula]]
     observation_history = [psi]
     credence_history = credence.History([])
 
     # create the compound trader, which just has one internal trader
     compound_trader = inductor.combine_trading_algorithms(
-        trading_algorithms,
+        trading_histories,
         observation_history,
         credence_history,
     )
