@@ -1,4 +1,4 @@
-![Continuous integration](https://github.com/alexflint/logical-induction/actions/workflows/integrate.yml/badge.svg)
+![Continuous integration](https://github.com/alexflint/logical-induction/actions/workflows/integrate.yaml/badge.svg)
 
 # Logical induction in Python
 
