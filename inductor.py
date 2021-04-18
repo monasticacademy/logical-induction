@@ -350,13 +350,13 @@ class LogicalInductor(object):
         self._trading_algorithms.append(trading_algorithm)
         self._trading_histories.append(trading_history)
 
-        # assemble the enemble trader
+        # assemble the ensemble trader
         ensemble_formula = combine_trading_algorithms(
             self._trading_histories,
             self._observation_history,
             self._credence_history)
 
-        # tolerances get tighter as we process more updates. TODO: use fractions rather than floating point arithmetic
+        # tolerances get tighter as we process more updates
         tolerance = 2 ** -len(self._observation_history)
 
         # find a set of credences not exploited by the compound trader
