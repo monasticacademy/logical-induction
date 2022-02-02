@@ -120,3 +120,24 @@ class Implication(Sentence):
 
     def __repr__(self):
         return str(self)
+
+
+class Iff(Sentence):
+    """
+    An iff is true if its left and right sides have the same truth value
+    """
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+    
+    def evaluate(self, base_facts):
+        return self.left.evaluate(base_facts) == self.right.evaluate(base_facts)
+
+    def atoms(self):
+        return set.union(self.left.atoms(), self.right.atoms())
+    
+    def __str__(self):
+        return "{} ⟷ {}".format(str(self.left), str(self.right))
+
+    def __repr__(self):
+        return str(self)
