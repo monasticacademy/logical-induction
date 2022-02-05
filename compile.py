@@ -1,5 +1,6 @@
 import io
 import collections
+import operator
 from typing import Any
 
 import ppci.lang.python
@@ -10,6 +11,8 @@ from sentence import Atom, Disjunction, Conjunction, Implication, Iff, Negation
 
 src = """
 def incr(x: int) -> int:
+    if x == 0:
+        return 100
     return x + 1
 """
 
@@ -24,6 +27,19 @@ def incr(x: int) -> int:
 
 MAX_INT = 2  # ha ha ha
 
+
+def binary_operator(s):
+    """Get a function from a string such as "+" or "*". """
+    if s == "+":
+        return operator.add
+    elif s == "-":
+        return operator.sub
+    elif s == "*":
+        return operator.mul
+    elif s == "/":
+        return operator.div
+    else:
+        raise Exception("unknown operator: {}".format(s))
 
 class SentenceBackend(object):
     def __init__(self):
@@ -54,14 +70,14 @@ class SentenceBackend(object):
                 if vout == vin:
                     self.sentences.append(Iff(aout, ain))
 
-    def add(self, result:str, lhs:str, rhs:str) -> None:
+    def binp(self, result:str, lhs:str, rhs:str, op) -> None:
         for vres in self.possible_values[result]:
             for vlhs in self.possible_values[lhs]:
                 for vrhs in self.possible_values[rhs]:
                     ares = self.atoms[(result, vres)]
                     alhs = self.atoms[(lhs, vlhs)]
                     arhs = self.atoms[(rhs, vrhs)]
-                    if vres == vlhs + vrhs:
+                    if vres == op(vlhs, vrhs):
                         self.sentences.append(Implication(Conjunction(alhs, arhs), ares))
 
 
@@ -81,6 +97,7 @@ def main():
 
     f = m.functions[0]
     f.dump()
+    return
 
     be = SentenceBackend()
 
@@ -108,12 +125,12 @@ def main():
         if isinstance(i, ppci.ir.Const):
             be.assign_constant(i.name, i.value)
         elif isinstance(i, ppci.ir.Binop):
-            if i.operation == "+":
-                be.add(i.name, i.uses[0].name, i.uses[1].name)
-            else:
-                raise Exception("unsupported binop: {}".format(i.operation))
+            f = binary_operator(i.operation)
+            be.binop(i.name, i.uses[0].name, i.uses[1].name, f)
         else:
             raise Exception("unsupported instruction")
+
+    # TODO: simple if statement
 
     for s in be.sentences:
         print(s)
