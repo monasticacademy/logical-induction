@@ -12,7 +12,6 @@ from sentence import Atom, Disjunction, Conjunction, Implication, Iff, Negation,
 
 src = """
 def make_pi_recursive(digits_left: int, q: int, r: int, t: int, k: int, m: int, x: int) -> int:
-    # q, r, t, k, m, x = 1, 0, 1, 1, 3, 3
     if 4 * q + r - t < m * t:
         if digits_left == 0:
           return m
@@ -22,6 +21,29 @@ def make_pi_recursive(digits_left: int, q: int, r: int, t: int, k: int, m: int, 
         q, r, t, k, m, x = q*k, (2*q+r)*x, t*x, k+1, (q*(7*k+2)+r*x)//(t*x), x+2
         return make_pi_recursive(digits_left, q, r, t, k, m, x)
 """
+
+
+def pi(i: int, q: int, r: int, t: int, k: int, m: int, x: int) -> int:
+    pistr = "pi({}, {}, {}, {}, {}, {}, {})".format
+    if 4 * q + r - t < m * t:
+        if i == 0:
+            yield "{} = {}".format(pistr(i, q, r, t, k, m, x), m)
+            return
+        yield "{} = {}".format(
+            pistr(i, q, r, t, k, m, x),
+            pistr(i-1, 10*q, 10*(r-m*t), t, k, (10*(3*q+r))//t - 10*m, x))
+        yield from pi(i-1, 10*q, 10*(r-m*t), t, k, (10*(3*q+r))//t - 10*m, x)
+    else:
+        yield "{} = {}".format(
+            pistr(i, q, r, t, k, m, x),
+            pistr(i, q*k, (2*q+r)*x, t*x, k+1, (q*(7*k+2)+r*x)//(t*x), x+2))
+        yield from pi(i, q*k, (2*q+r)*x, t*x, k+1, (q*(7*k+2)+r*x)//(t*x), x+2)
+
+
+for statement in pi(10, 1, 0, 1, 1, 3, 3):
+    print(statement)
+
+exit(0)
 
 # def fib(n: int) -> int:
 #     if n <= 1:
