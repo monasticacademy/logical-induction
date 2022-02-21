@@ -1,7 +1,7 @@
 import matplotlib
 matplotlib.use('Agg')
 
-import seaborn as sns
+import seaborn
 import matplotlib.figure
 
 import inductor
@@ -25,6 +25,7 @@ def make_s_curve(f, intercept, slope):
         )
     )
 
+
 def main():
     # the sentence we're going to bet on
     digit_n_is_k = sentence.Atom("n-th digit of pi is k")
@@ -43,7 +44,7 @@ def main():
     li = inductor.LogicalInductor()
 
     # number of days to run trading for
-    num_days = 5
+    num_days = 15
 
     # run the logical inductor
     history = []

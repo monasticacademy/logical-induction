@@ -35,11 +35,23 @@ def evaluate(trading_formulas, credence_history, world) -> float:
     return value_of_holdings
 
 
-def find_credences(trading_formulas, credence_history, tolerance, hints=[]):
+def rational_credences(sentences):
+    """
+    Enumerates all rational-valued credences over a set of sentences
+    """
+    for cs in enumerator.product(enumerator.rationals_between(0, 1), len(sentences)):
+        yield {sentence: credence for sentence, credence in zip(sentences, cs)}
+
+
+def find_credences(trading_formulas, credence_history, tolerance, credence_search_order=None):
     """
     Find a set of credences such that the value-of-holdings for the trades
     executed by trading_formulas are not greater than tolerance in any world.
     """
+
+    # if no search order specified then brute force all rational-valued credences
+    if credence_search_order is None:
+        credence_search_order = rational_credences
 
     # compute the set of sentences upon whose truth value the net holdings of our trader depends
     support = set(trading_formulas.keys())
@@ -47,18 +59,24 @@ def find_credences(trading_formulas, credence_history, tolerance, hints=[]):
     # compute the set of sentences over which we should search for credences
     search_domain = union(formula.domain() for formula in trading_formulas.values()).union(support)
 
-    def credences_over(sentences):
-        for cs in enumerator.product(enumerator.rationals_between(0, 1), len(sentences)):
-            yield {sentence: credence for sentence, credence in zip(sentences, cs)}
+    print("support: {}".format(support))
+
+    for sentence, formula in trading_formulas.items():
+        print("trading formula for {}:".format(sentence))
+        print(formula.tree())
 
     # brute force search over all rational-valued credences between 0 and 1
-    for credences in itertools.chain(hints, credences_over(search_domain)):
+    for credences in credence_search_order(search_domain):
+        print("trying credences {}".format(",".join(str(c) for c in credences.values())))
         history = credence_history.with_next_update(credences)
 
         # check all possible worlds (all possible truth values for the support sentences)
         satisfied = True
         for truth_values in itertools.product([0, 1], repeat=len(support)):
             world = {sentence: truth for sentence, truth in zip(support, truth_values)}
+
+            print("checking world {}".format(",".join(str(int(b)) for b in world.values())))
+
             value_of_holdings = evaluate(trading_formulas, history, world)
 
             # there might not be any way to prevent our traders from losing money,
@@ -131,15 +149,18 @@ def compute_budget_factor(
     # evaluate the "if" clause in (5.2.1)
     for i in range(history_length):
         observations_up_to_i = set(observation_history[:i+1])
+
         # go over the worlds consistent with the first N observations
         for world in worlds_consistent_with(observations_up_to_i, support):
+
             # calculate the accumulated value of the trader up to update N
             accumulated_value = 0
             for cur_trading_formulas in trading_history[:i+1]:
                 accumulated_value += evaluate(cur_trading_formulas, credence_history, world)
+
+                # if we have exceeded our budget on a previous update then we
+                # have no more money to trade now
                 if accumulated_value < -budget + 1e-7:
-                    # we have exceeded our budget on a previous update so we
-                    # have no more money to trade now
                     return formula.Constant(0)
 
     # create a set of observations up to and including the most recent
@@ -331,7 +352,7 @@ class LogicalInductor(object):
         self._observation_history = []
         self._credence_history = credence.History()
 
-    def update(self, observation, trading_algorithm):
+    def update(self, observation, trading_algorithm, search_order=None):
         """
         Given: 
          * An observation
@@ -357,6 +378,7 @@ class LogicalInductor(object):
         self._trading_histories.append(trading_history)
 
         # assemble the ensemble trader
+        print("computing the ensemble...")
         ensemble_formula = combine_trading_algorithms(
             self._trading_histories,
             self._observation_history,
@@ -365,19 +387,16 @@ class LogicalInductor(object):
         # tolerances get tighter as we process more updates
         tolerance = 2 ** -len(self._observation_history)
 
-        # try searching the previous day's update first
-        hints = []
-        if len(self._credence_history) > 0:
-            hints.append(self._credence_history.last_update())
-
         # find a set of credences not exploited by the compound trader
+        print("solving for the credences...")
         credences = find_credences(
             ensemble_formula,
             self._credence_history,
             tolerance,
-            hints)
+            search_order)
 
         # add these credences to the history
+        print("adding new credences to history...")
         self._credence_history = self._credence_history.with_next_update(credences)
 
         # return the credences
