@@ -49,15 +49,15 @@ class Formula(ABC):
     @abstractmethod
     def bound(self):
         """
-        Get an upper bound on the absolute value of evaluate() for any
-        credence history with credences between 0 and 1.
+        Get an upper bound on the absolute value of this formula for any
+        credence history.
         """
         pass
 
     @abstractmethod
     def domain(self):
         """
-        Get a set containing the sentences whose price will be used in the
+        Get the sentences whose price will be used in the
         evaluation of this formula.
         """
         pass
@@ -102,7 +102,8 @@ class Price(Formula):
     Represents a trading formula that looks up the price for a given sentence on
     a given day.
     """
-    def __init__(self, sentence, day):
+    def __init__(self, sentence, day: int):
+        assert(day >= 1)  # day indices are 1-based
         self.sentence = sentence
         self.day = day
 
@@ -215,6 +216,38 @@ class Max(Formula):
         else:
             s = ", ".join(str(term) for term in self.terms)
             return "max({})".format(s)
+
+    def __repr__(self):
+        return str(self)
+
+
+class Min(Formula):
+    """
+    Represents a trading formula that is the min of some other formulas.
+    """
+    def __init__(self, *terms):
+        self.terms = list(terms)
+
+    def evaluate(self, credence_history):
+        assert isinstance(credence_history, credence.History)
+        return min(term.evaluate(credence_history) for term in self.terms)
+
+    def bound(self):
+        return min(term.bound() for term in self.terms)
+
+    def domain(self):
+        return set.union(*(term.domain() for term in self.terms))
+
+    def tree(self):
+        return maketree("Min", self.terms)
+
+    def __str__(self):
+        # avoid unnecessary parentheses if there is only one term
+        if len(self.terms) == 1:
+            return str(self.terms[0])
+        else:
+            s = ", ".join(str(term) for term in self.terms)
+            return "min({})".format(s)
 
     def __repr__(self):
         return str(self)

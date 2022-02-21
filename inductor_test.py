@@ -175,7 +175,7 @@ def test_compute_budget_factor_two_base_facts():
     #   phi=False  psi=True    -> value of 10 tokens of phi = $0, so net worth between -$10 and $0
     #
     # In the third world, our net worth could drop below our budget for some
-    # possible credences, so...
+    # possible credences, so:
     
     # if the credence for phi were 1 then in the third world we would end up with a
     # net worth of -$10, so we should multiply our trading volume by 0.2

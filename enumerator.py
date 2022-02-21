@@ -35,9 +35,8 @@ def allocations_of(balls, jars):
     """Enumerates the ways to divide N identical balls among K jars.
     Returns a sequence of tuples, each of which contains K integers
     that add up to N."""
-
-    # base case: there is only one way to divide N balls among 1 jar
     if jars == 1:
+        # base case: there is only one way to divide N balls among 1 jar
         yield (balls,)
     else:
         for i in range(balls+1):
@@ -45,64 +44,11 @@ def allocations_of(balls, jars):
                 yield (i,) + sub
 
 
-def product(atoms, length):
-    """Enumerates the cartesian product of atoms with itself N times."""
+def product(xs, length):
+    """Enumerates the cartesian product of X with itself N times.
+    Unlike itertools.product, this works when X is an infinite sequence."""
     cache = []
-    for i, atom in enumerate(atoms):
-        cache.append(atom)
+    for i, x in enumerate(xs):
+        cache.append(x)
         for js in allocations_of(i, length):
             yield tuple(list(cache[j] for j in js))
-
-
-def expressible_features(num_days):
-    """Enumerates expressible features with support for M sentences over N
-    days."""
-    cache = []
-
-    def impl():
-        rats = nonnegative_rationals()
-        sentences = integers(start=1)
-        while True:
-            # shallow-copy the cache
-            cur_cache = [ef for ef in cache]
-
-            # add a constant feature (positive and negative)
-            yield Constant(next(rats))
-            yield Constant(-next(rats))
-
-            # add a round of price features
-            sentence = next(sentences)
-            for day in range(num_days):
-                yield Price(sentence, day)
-
-            # add reciprocals for each of the base features
-            for ftr in cur_cache:
-                yield SafeReciprocal(ftr)
-
-            # add sum, product, and max features for each pair of base features
-            for a in cur_cache:
-                for b in cur_cache:
-                    yield Sum(a, b)
-                    yield Product(a, b)
-                    yield Max(a, b)
-
-    for ftr in impl():
-        cache.append(ftr)
-        yield ftr
-
-
-def trading_strategies(num_days, num_sentences):
-    """Enumerate trading strategies for day N with support for M
-    sentences."""
-    features = expressible_features(num_days)
-    for st in product(features, repeat=num_sentences):
-        yield st
-
-
-def traders():
-    """Enumerate efficiently computable traders. An e.c. trader is a sequence of
-    trading strategies in which the n-th element can be computed in time
-    polynomial in n.
-        
-    TODO: implement properly."""
-    pass

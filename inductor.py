@@ -16,7 +16,7 @@ def union(sequences):
         return set.union(*(x for x in sets))
 
 
-def evaluate(trading_formulas, credence_history, world):
+def evaluate(trading_formulas, credence_history, world) -> float:
     """
     Compute the value of the trades executed by trading_formulas in the given
     world.
@@ -35,7 +35,7 @@ def evaluate(trading_formulas, credence_history, world):
     return value_of_holdings
 
 
-def find_credences(trading_formulas, credence_history, tolerance):
+def find_credences(trading_formulas, credence_history, tolerance, hints=[]):
     """
     Find a set of credences such that the value-of-holdings for the trades
     executed by trading_formulas are not greater than tolerance in any world.
@@ -47,16 +47,22 @@ def find_credences(trading_formulas, credence_history, tolerance):
     # compute the set of sentences over which we should search for credences
     search_domain = union(formula.domain() for formula in trading_formulas.values()).union(support)
 
+    def credences_over(sentences):
+        for cs in enumerator.product(enumerator.rationals_between(0, 1), len(sentences)):
+            yield {sentence: credence for sentence, credence in zip(sentences, cs)}
+
     # brute force search over all rational-valued credences between 0 and 1
-    for cs in enumerator.product(enumerator.rationals_between(0, 1), len(search_domain)):
-        credences = {sentence: credence for sentence, credence in zip(support, cs)}
-        h = credence_history.with_next_update(credences)
+    for credences in itertools.chain(hints, credences_over(search_domain)):
+        history = credence_history.with_next_update(credences)
 
         # check all possible worlds (all possible truth values for the support sentences)
         satisfied = True
         for truth_values in itertools.product([0, 1], repeat=len(support)):
             world = {sentence: truth for sentence, truth in zip(support, truth_values)}
-            value_of_holdings = evaluate(trading_formulas, h, world)
+            value_of_holdings = evaluate(trading_formulas, history, world)
+
+            # there might not be any way to prevent our traders from losing money,
+            # so there is no abs() in the below
             if value_of_holdings > tolerance:
                 satisfied = False
                 break
@@ -359,8 +365,17 @@ class LogicalInductor(object):
         # tolerances get tighter as we process more updates
         tolerance = 2 ** -len(self._observation_history)
 
+        # try searching the previous day's update first
+        hints = []
+        if len(self._credence_history) > 0:
+            hints.append(self._credence_history.last_update())
+
         # find a set of credences not exploited by the compound trader
-        credences = find_credences(ensemble_formula, self._credence_history, tolerance)
+        credences = find_credences(
+            ensemble_formula,
+            self._credence_history,
+            tolerance,
+            hints)
 
         # add these credences to the history
         self._credence_history = self._credence_history.with_next_update(credences)
