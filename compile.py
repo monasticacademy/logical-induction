@@ -11,14 +11,39 @@ from ppci import ir
 from sentence import Atom, Disjunction, Conjunction, Implication, Iff, Negation, Sentence
 
 src = """
-def incr(x: int) -> int:
-    ans = 0
-    if x == 0:
-        ans = 100
+def make_pi_recursive(digits_left: int, q: int, r: int, t: int, k: int, m: int, x: int) -> int:
+    if 4 * q + r - t < m * t:
+        if digits_left == 0:
+          return m
+        q, r, t, k, m, x = 10*q, 10*(r-m*t), t, k, (10*(3*q+r))//t - 10*m, x
+        return make_pi_recursive(digits_left - 1, q, r, t, k, m, x)
     else:
-        ans = x + 1
-    return ans
+        q, r, t, k, m, x = q*k, (2*q+r)*x, t*x, k+1, (q*(7*k+2)+r*x)//(t*x), x+2
+        return make_pi_recursive(digits_left, q, r, t, k, m, x)
 """
+
+
+def pi(i: int, q: int, r: int, t: int, k: int, m: int, x: int) -> int:
+    pistr = "pi({}, {}, {}, {}, {}, {}, {})".format
+    if 4 * q + r - t < m * t:
+        if i == 0:
+            yield "{} = {}".format(pistr(i, q, r, t, k, m, x), m)
+            return
+        yield "{} = {}".format(
+            pistr(i, q, r, t, k, m, x),
+            pistr(i-1, 10*q, 10*(r-m*t), t, k, (10*(3*q+r))//t - 10*m, x))
+        yield from pi(i-1, 10*q, 10*(r-m*t), t, k, (10*(3*q+r))//t - 10*m, x)
+    else:
+        yield "{} = {}".format(
+            pistr(i, q, r, t, k, m, x),
+            pistr(i, q*k, (2*q+r)*x, t*x, k+1, (q*(7*k+2)+r*x)//(t*x), x+2))
+        yield from pi(i, q*k, (2*q+r)*x, t*x, k+1, (q*(7*k+2)+r*x)//(t*x), x+2)
+
+
+for statement in pi(10, 1, 0, 1, 1, 3, 3):
+    print(statement)
+
+exit(0)
 
 # def fib(n: int) -> int:
 #     if n <= 1:
@@ -41,7 +66,9 @@ def binary_operator(s: str) -> Callable:
     elif s == "*":
         return operator.mul
     elif s == "/":
-        return operator.div
+        return operator.truediv
+    elif s == "//":
+        return operator.floordiv
     else:
         raise Exception("unknown binary operator: {}".format(s))
 
@@ -124,8 +151,11 @@ class SentenceBackend(object):
                 alhs = self.atoms[(lhs, vlhs)]
                 for vrhs in self.possible_values[rhs]:
                     arhs = self.atoms[(rhs, vrhs)]
-                    if vres == op(vlhs, vrhs):
-                        self.sentences.append(Implication(Conjunction(alhs, arhs), ares))
+                    try:
+                        if vres == op(vlhs, vrhs):
+                            self.sentences.append(Implication(Conjunction(alhs, arhs), ares))
+                    except ZeroDivisionError as e:
+                        pass
 
 
 def mod_name(mod: ir.Module) -> str:
