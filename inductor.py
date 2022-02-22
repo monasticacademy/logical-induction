@@ -232,7 +232,7 @@ def compute_budget_factor(
             neg_value_of_holdings)
 
         # add the budget factor for this world to the list of terms
-        budget_divisors.append(divisor_in_this_world)    
+        budget_divisors.append(divisor_in_this_world)
 
     # the final budget divisor is the max of all the possible budget divisors.
     budget_divisor = formula.Max(*budget_divisors)
