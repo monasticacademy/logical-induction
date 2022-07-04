@@ -8,8 +8,10 @@ class_pattern = re.compile("^class (\w+)")
 html = """<!DOCTYPE html>
 <meta charset="utf-8">
 <title>Redirecting to {url}</title>
-<meta http-equiv="refresh" content="0; URL={url}">
-<link rel="canonical" href="{url}">
+<meta http-equiv="Refresh" content="0; URL={url}">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 """
 
 def main():
