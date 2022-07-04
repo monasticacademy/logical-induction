@@ -59,24 +59,14 @@ def find_credences(trading_formulas, credence_history, tolerance, credence_searc
     # compute the set of sentences over which we should search for credences
     search_domain = union(formula.domain() for formula in trading_formulas.values()).union(support)
 
-    print("support: {}".format(support))
-
-    for sentence, formula in trading_formulas.items():
-        print("trading formula for {}:".format(sentence))
-        print(formula.tree())
-
     # brute force search over all rational-valued credences between 0 and 1
     for credences in credence_search_order(search_domain):
-        print("trying credences {}".format(",".join(str(c) for c in credences.values())))
         history = credence_history.with_next_update(credences)
 
         # check all possible worlds (all possible truth values for the support sentences)
         satisfied = True
         for truth_values in itertools.product([0, 1], repeat=len(support)):
             world = {sentence: truth for sentence, truth in zip(support, truth_values)}
-
-            print("checking world {}".format(",".join(str(int(b)) for b in world.values())))
-
             value_of_holdings = evaluate(trading_formulas, history, world)
 
             # there might not be any way to prevent our traders from losing money,
@@ -378,7 +368,6 @@ class LogicalInductor(object):
         self._trading_histories.append(trading_history)
 
         # assemble the ensemble trader
-        print("computing the ensemble...")
         ensemble_formula = combine_trading_algorithms(
             self._trading_histories,
             self._observation_history,
@@ -388,7 +377,6 @@ class LogicalInductor(object):
         tolerance = 2 ** -len(self._observation_history)
 
         # find a set of credences not exploited by the compound trader
-        print("solving for the credences...")
         credences = find_credences(
             ensemble_formula,
             self._credence_history,
@@ -396,7 +384,6 @@ class LogicalInductor(object):
             search_order)
 
         # add these credences to the history
-        print("adding new credences to history...")
         self._credence_history = self._credence_history.with_next_update(credences)
 
         # return the credences
