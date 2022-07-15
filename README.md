@@ -10,7 +10,7 @@ efficiency.
 
 To run the example code:
 ```bash
-$ git checkout git@github.com:alexflint/logical-induction.git
+$ git clone git@github.com:alexflint/logical-induction.git
 $ cd logical-induction
 $ python3 logical_induction_example.py
 
@@ -66,7 +66,7 @@ belief state is a map from sentences to credences, and a history of belief
 states is a list of belief states.
 
 The code in `enumerator.py` provides various routines for enumerating possible
-worlds and possible trading algorithms.
+worlds.
 
-The code in `logical_inductor_example.py` instantiates a logical inductor and
+The code in `example/two_updates.py` instantiates a logical inductor and
 feeds it two observations, printing out the credences it receives in response.
