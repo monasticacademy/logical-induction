@@ -1,0 +1,24 @@
+[project]
+name = "logicalinduction"
+version = "0.0.4"
+authors = [{name="Kōshin Alex Flint", email="alex.flint@gmail.com"}]
+description = "A computable algorithm for quantifying uncertainty"
+readme = "README.md"
+license = { file="LICENSE" }
+requires-python = ">=3.5"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project.urls]
+"Homepage" = "https://github.com/alexflint/logicalinduction"
+"Bug Tracker" = "https://github.com/alexflint/logicalinduction/issues"
+
+[tool.setuptools]
+packages = ["logicalinduction"]
