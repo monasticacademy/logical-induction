@@ -8,6 +8,10 @@ build:
 
 publish:
 	python -m twine upload dist/* \
+		--username alexflint
+
+publish_test:
+	python -m twine upload dist/* \
 		--username alexflint \
 		--repository testpypi
 
