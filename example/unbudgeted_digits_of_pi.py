@@ -1,10 +1,6 @@
 import collections
 
-import credence
-import inductor
-import formula
-import sentence
-import enumerator
+from logicalinduction import credence, inductor, formula, sentence, enumerator
 
 
 def trade_on_probability(sentence, day, p, slope=10):

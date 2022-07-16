@@ -4,11 +4,7 @@ matplotlib.use('Agg')
 import seaborn
 import matplotlib.figure
 
-import inductor
-import sentence
-import formula
-import enumerator
-
+from logicalinduction import inductor, formula, sentence, enumerator
 
 def make_s_curve(f, intercept, slope):
     return formula.Min(
