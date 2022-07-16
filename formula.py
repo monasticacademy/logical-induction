@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-import credence
+from . import credence
 
 
 def multiply(xs):

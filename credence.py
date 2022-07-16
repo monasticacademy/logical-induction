@@ -1,5 +1,4 @@
 
-
 class History(object):
     """Represents a sequence of belief states."""
 

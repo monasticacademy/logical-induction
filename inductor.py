@@ -2,9 +2,9 @@ import itertools
 import collections
 import math
 
-import enumerator
-import formula
-import credence
+from . import enumerator
+from . import formula
+from . import credence
 
 
 def union(sequences):
