@@ -16,13 +16,13 @@ def union(sequences):
         return set.union(*(x for x in sets))
 
 
-def evaluate(trading_formulas, credence_history, world) -> float:
+def evaluate(trading_policy, credence_history, world) -> float:
     """
-    Compute the value of the trades executed by trading_formulas in the given
+    Compute the value of the trades executed by trading_policy in the given
     world.
     """
     value_of_holdings = 0
-    for sentence, formula in trading_formulas.items():
+    for sentence, formula in trading_policy.items():
         # compute the quantity of tokens purchased for this sentence 
         quantity = formula.evaluate(credence_history)
         # compute the price paid for those tokens
@@ -43,10 +43,10 @@ def rational_credences(sentences):
         yield {sentence: credence for sentence, credence in zip(sentences, cs)}
 
 
-def find_credences(trading_formulas, credence_history, tolerance, credence_search_order=None):
+def find_credences(trading_policy, credence_history, tolerance, credence_search_order=None):
     """
     Find a set of credences such that the value-of-holdings for the trades
-    executed by trading_formulas are not greater than tolerance in any world.
+    executed by trading_policy are not greater than tolerance in any world.
     """
 
     # if no search order specified then brute force all rational-valued credences
@@ -54,10 +54,10 @@ def find_credences(trading_formulas, credence_history, tolerance, credence_searc
         credence_search_order = rational_credences
 
     # compute the set of sentences upon whose truth value the net holdings of our trader depends
-    support = set(trading_formulas.keys())
+    support = set(trading_policy.keys())
 
     # compute the set of sentences over which we should search for credences
-    search_domain = union(formula.domain() for formula in trading_formulas.values()).union(support)
+    search_domain = union(formula.domain() for formula in trading_policy.values()).union(support)
 
     # brute force search over all rational-valued credences between 0 and 1
     for credences in credence_search_order(search_domain):
@@ -67,7 +67,7 @@ def find_credences(trading_formulas, credence_history, tolerance, credence_searc
         satisfied = True
         for truth_values in itertools.product([0, 1], repeat=len(support)):
             world = {sentence: truth for sentence, truth in zip(support, truth_values)}
-            value_of_holdings = evaluate(trading_formulas, history, world)
+            value_of_holdings = evaluate(trading_policy, history, world)
 
             # there might not be any way to prevent our traders from losing money,
             # so there is no abs() in the below
@@ -107,11 +107,11 @@ def compute_budget_factor(
     observation_history,
     next_observation,
     trading_history,
-    next_trading_formulas,
+    next_trading_policy,
     credence_history):
     """
     Returns a trading formula representing a weight that can be multiplied with
-    each formula in next_trading_formulas in order to guarantee that the
+    each formula in next_trading_policy in order to guarantee that the
     trader's value-of-holdings will not fall below the given budget in any
     world.
 
@@ -123,7 +123,7 @@ def compute_budget_factor(
 
     next_observation is the most recently observed sentence.
 
-    next_trading_formulas is a list of (sentence, formula) pairs that will be
+    next_trading_policy is a list of (sentence, formula) pairs that will be
     evaluated on whatever credences the logical inductor outputs when it updates
     its credences in light of next_observation. We do not get to see these
     credences when computing the budget factor because the budget factor is an
@@ -134,7 +134,7 @@ def compute_budget_factor(
     history_length = len(observation_history)
 
     # compute the support for all trading formulas over all days
-    support = union(set(trading_formulas.keys()) for trading_formulas in trading_history)
+    support = union(set(trading_policy.keys()) for trading_policy in trading_history)
 
     # evaluate the "if" clause in (5.2.1)
     for i in range(history_length):
@@ -145,8 +145,8 @@ def compute_budget_factor(
 
             # calculate the accumulated value of the trader up to update N
             accumulated_value = 0
-            for cur_trading_formulas in trading_history[:i+1]:
-                accumulated_value += evaluate(cur_trading_formulas, credence_history, world)
+            for cur_trading_policy in trading_history[:i+1]:
+                accumulated_value += evaluate(cur_trading_policy, credence_history, world)
 
                 # if we have exceeded our budget on a previous update then we
                 # have no more money to trade now
@@ -158,7 +158,7 @@ def compute_budget_factor(
     observations.add(next_observation)
 
     # add atoms for next_trading_formula to the support set
-    support.update(set(next_trading_formulas.keys()))
+    support.update(set(next_trading_policy.keys()))
 
     # if we got this far then we have not already exceeded our budget, so now
     # compute the budget factor
@@ -166,8 +166,8 @@ def compute_budget_factor(
     for world in worlds_consistent_with(observations, support):
         # compute our accumulated value in this world
         accumulated_value = 0
-        for cur_trading_formulas in trading_history:
-            accumulated_value += evaluate(cur_trading_formulas, credence_history, world)
+        for cur_trading_policy in trading_history:
+            accumulated_value += evaluate(cur_trading_policy, credence_history, world)
 
         # the money we have left to trade now is our original budget, plus
         # (resp. minus) any money we made (resp. lost) since the beginning of
@@ -179,10 +179,10 @@ def compute_budget_factor(
         remaining_budget_recip = 1. / remaining_budget
 
         # construct a trading formula representing the value of
-        # next_trading_formulas in this world, as a function of the
+        # next_trading_policy in this world, as a function of the
         # yet-to-be-determined credences for the latest update
         value_of_holdings_terms = []
-        for sentence, trading_formula in next_trading_formulas.items():
+        for sentence, trading_formula in next_trading_policy.items():
             # construct a trading formula that looks up the price of tokens for this sentence
             price = formula.Price(sentence, history_length+1)
 
