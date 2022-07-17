@@ -12,7 +12,7 @@ To run the example code:
 ```bash
 $ git clone git@github.com:alexflint/logical-induction.git
 $ cd logical-induction
-$ python3 logical_induction_example.py
+$ python examples/two_updates.py
 
 after update 1:
   the sky is blue                          1.000000
