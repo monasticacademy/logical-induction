@@ -1,6 +1,6 @@
 from nose.tools import assert_equal, assert_true, assert_false
 
-from sentence import Atom, Negation, Disjunction, Conjunction
+from .sentence import Atom, Negation, Conjunction
 
 def test_atom():
     world = {"s1": True, "s2": False}

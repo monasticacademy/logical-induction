@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9']
+        python-version: ['3.9', '3.10']
 
     steps:
     - uses: actions/checkout@v2
@@ -21,12 +21,10 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 pytest nose
         pip install -r requirements.txt
 
     - name: Run tests
-      run: |
-        pytest
+      run: nosetests
 
     - name: Check types
       uses: jpetrucciani/mypy-check@master

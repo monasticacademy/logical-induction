@@ -1,11 +1,11 @@
 import itertools
 from nose.tools import assert_equal
 
-import enumerator
+from .enumerator import integer_vectors, product
 
 
 def test_integer_vectors():
-    it = enumerator.integer_vectors(3)
+    it = integer_vectors(3)
     assert_equal(next(it), (0, 0, 0))
     assert_equal(next(it), (0, 0, 1))
     assert_equal(next(it), (0, 1, 0))
@@ -20,7 +20,7 @@ def test_integer_vectors():
 
 
 def test_product():
-    it = enumerator.product(itertools.cycle('abcd'), 2)
+    it = product(itertools.cycle('abcd'), 2)
     assert_equal(''.join(next(it)), 'aa')
     assert_equal(''.join(next(it)), 'ab')
     assert_equal(''.join(next(it)), 'ba')
