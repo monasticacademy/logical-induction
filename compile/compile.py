@@ -43,8 +43,6 @@ def pi(i: int, q: int, r: int, t: int, k: int, m: int, x: int) -> int:
 for statement in pi(10, 1, 0, 1, 1, 3, 3):
     print(statement)
 
-exit(0)
-
 # def fib(n: int) -> int:
 #     if n <= 1:
 #         return n
