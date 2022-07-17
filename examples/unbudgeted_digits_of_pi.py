@@ -49,7 +49,7 @@ def main():
         trading_algorithm(.3)
     ]
 
-    # run a simple unbudgeted 
+    # run a simple unbudgeted logical inductor (not really a logical inductor)
     history = credence.History()
     for day in range(num_days):
         formulae = [next(alg) for alg in algorithms]
