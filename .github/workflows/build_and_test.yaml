@@ -24,7 +24,7 @@ jobs:
         pip install -r requirements.txt
 
     - name: Run tests
-      run: nosetests
+      run: pytest
 
     - name: Check types
       uses: jpetrucciani/mypy-check@master

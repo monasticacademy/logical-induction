@@ -3,7 +3,7 @@ links:
 	python scripts/generate_links.py --sources *.py --output docs/link
 
 test:
-	nosetests
+	pytest
 
 build:
 	rm -rf dist/*
