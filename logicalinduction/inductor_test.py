@@ -1,5 +1,3 @@
-from nose.tools import assert_equal, assert_almost_equal, assert_is_instance
-
 from .credence import History
 from .formula import Price, Sum, Constant, Product, Max, SafeReciprocal
 from .sentence import Atom, Disjunction, Negation
@@ -27,7 +25,7 @@ def test_evaluate():
     }
     value = evaluate(trading_formulas, credence_history, world)
     expected_value = .7 * (1 - .8) + .1 * (0 - .1)
-    assert_equal(value, expected_value)
+    assert value == expected_value
 
 
 def test_find_credences_trivial():
@@ -36,7 +34,7 @@ def test_find_credences_trivial():
         1: Price(1, 1),   # purchase tokens for sentence 1 in quantity equal to the credence for sentence 1 after the first update
     }
     new_credences = find_credences(trading_formulas, credence_history, 0.5)
-    assert_equal(new_credences[1], 0)
+    assert new_credences[1] == 0
 
 
 def test_find_credences_single():
@@ -53,7 +51,7 @@ def test_find_credences_single():
     new_credences = find_credences(trading_formulas, credence_history, 1e-5)
 
     # setting credence to 1/3 yields a trade quantity of zero, which satisfies
-    assert_almost_equal(new_credences[1], 1/3)
+    assert abs(new_credences[1] - 1/3) < 1e-8
 
 
 def test_find_credences_multiple():
@@ -78,8 +76,8 @@ def test_find_credences_multiple():
     new_credences = find_credences(trading_formulas, credence_history, 1e-5)
 
     # setting credence[1] to 1 and credence[2] to 0 satisfies the conditions
-    assert_almost_equal(new_credences[1], 1)
-    assert_almost_equal(new_credences[2], 0)
+    assert abs(new_credences[1] - 1) < 1e-8
+    assert abs(new_credences[2] - 0) < 1e-8
 
 
 def test_compute_budget_factor_simple():
@@ -111,7 +109,7 @@ def test_compute_budget_factor_simple():
         latest_trading_formulas,
         past_credences)
 
-    assert_is_instance(budget_factor, SafeReciprocal)
+    assert isinstance(budget_factor, SafeReciprocal)
     
     # our world consists of only one base fact (phi), and we observed phi, so
     # the world where phi=true is only one world propositionally consistent with
@@ -120,10 +118,10 @@ def test_compute_budget_factor_simple():
     # credence for phi, and will have a value of exactly $10 in this world. In
     # no case will the value of our holdings drop below -$2, so we expect a
     # budget factor that evaluates to 1 for all credences in [0, 1].
-    assert_equal(budget_factor.evaluate(past_credences.with_next_update({phi: 0.})), 1.)
-    assert_equal(budget_factor.evaluate(past_credences.with_next_update({phi: .2})), 1.)
-    assert_equal(budget_factor.evaluate(past_credences.with_next_update({phi: .6})), 1.)
-    assert_equal(budget_factor.evaluate(past_credences.with_next_update({phi: 1.})), 1.)
+    assert budget_factor.evaluate(past_credences.with_next_update({phi: 0.})) == 1.
+    assert budget_factor.evaluate(past_credences.with_next_update({phi: .2})) == 1.
+    assert budget_factor.evaluate(past_credences.with_next_update({phi: .6})) == 1.
+    assert budget_factor.evaluate(past_credences.with_next_update({phi: 1.})) == 1.
 
 
 def test_compute_budget_factor_two_base_facts():
@@ -156,7 +154,7 @@ def test_compute_budget_factor_two_base_facts():
         latest_trading_formulas,
         past_credences)
 
-    assert_is_instance(budget_factor, SafeReciprocal)
+    assert isinstance(budget_factor, SafeReciprocal)
 
     print()
     print(budget_factor.tree())
@@ -180,19 +178,19 @@ def test_compute_budget_factor_two_base_facts():
     
     # if the credence for phi were 1 then in the third world we would end up with a
     # net worth of -$10, so we should multiply our trading volume by 0.2
-    assert_almost_equal(budget_factor.evaluate(past_credences.with_next_update({phi: 1.})), .2)
+    assert abs(budget_factor.evaluate(past_credences.with_next_update({phi: 1.})) - .2) < 1e-8
 
     # if the credence for phi were 0.4 then in the third world we would end up with a
     # net worth of -$4, so we should multiply our trading volume by 0.5
-    assert_almost_equal(budget_factor.evaluate(past_credences.with_next_update({phi: .4})), .5)
+    assert abs(budget_factor.evaluate(past_credences.with_next_update({phi: .4})) - .5) < 1e-8
 
     # if the credence for phi were 0.2 then in the third world we would end up with a
     # net worth of -$2, which is right on budget, so our scaling factor should be 1
-    assert_almost_equal(budget_factor.evaluate(past_credences.with_next_update({phi: .2})), 1.)
+    assert abs(budget_factor.evaluate(past_credences.with_next_update({phi: .2})) - 1.) < 1e-8
 
     # if the credence for phi were 0 then in the third world we would end up with a
     # net worth of $0, which is above budget, so our scaling factor should be 1
-    assert_almost_equal(budget_factor.evaluate(past_credences.with_next_update({phi: 0.})), 1.)
+    assert abs(budget_factor.evaluate(past_credences.with_next_update({phi: 0.})) - 1.) < 1e-8
 
 def test_compute_budget_factor_already_overran_budget():
     phi = Atom("ϕ")
@@ -238,8 +236,8 @@ def test_compute_budget_factor_already_overran_budget():
     # which case we would have lost $7, which is more than our budget of $2, so
     # our budget factor should be the constant 0 which eliminates all further
     # trading
-    assert_is_instance(budget_factor, Constant)
-    assert_equal(budget_factor.k, 0)
+    assert isinstance(budget_factor, Constant)
+    assert budget_factor.k == 0
 
 
 def test_combine_trading_algorithms_simple():
@@ -260,9 +258,9 @@ def test_combine_trading_algorithms_simple():
         credence_history,
     )
 
-    assert_equal(len(compound_trader), 1)
-    assert_is_instance(compound_trader[phi], Sum)
-    assert_equal(len(compound_trader[phi].terms), 3)
+    assert len(compound_trader) == 1
+    assert isinstance(compound_trader[phi], Sum)
+    assert len(compound_trader[phi].terms) == 3
 
 
 def test_logical_inductor_simple():
