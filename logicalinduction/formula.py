@@ -1,9 +1,51 @@
 from abc import ABC, abstractmethod
-from tkinter.tix import Form
-from tokenize import Number
+from operator import mul
+from typing import Iterator, Protocol, Iterable
+from functools import reduce
+from fractions import Fraction
 
 from .sentence import Sentence
 from .credence import History
+
+
+class Number(Protocol):
+    def __abs__(self) -> 'Number':
+        ...
+    def __mul__(self, Number) -> 'Number':
+        ...
+    def __add__(self, Number) -> 'Number':
+        ...
+    def __lt__(self, Number) -> bool:
+        ...
+    def __gt__(self, Number) -> bool:
+        ...
+    def __truediv__(self, Number) -> 'Number':
+        ...
+    def __rtruediv__(self, Number) -> 'Number':
+        ...
+
+
+def multiply(xs: Iterator[Number]) -> Number:
+    """Compute the product of the elements of a list, or return None if the list
+    is empty."""
+    return reduce(mul, xs)
+
+
+def parenthize(formula: 'Formula'):
+    """Add parentheses around a formula if it is a sum or product formula."""
+    if isinstance(formula, (Sum, Product)):
+        return "(" + str(formula) + ")"
+    else:
+        return str(formula)
+
+
+def maketree(parent_label: str, children : Iterable['Formula']) -> str:
+    """Construct a multi-line string representing the formula."""
+    s = parent_label
+    for child in children:
+        s += "\n. "
+        s += child.tree().replace("\n", "\n. ")
+    return s
 
 
 class Formula(ABC):
@@ -48,11 +90,10 @@ class Constant(Formula):
     """
     Represents a constant trading formula.
     """
-    def __init__(self, k):
+    def __init__(self, k: Number):
         self.k = k
 
-    def evaluate(self, credence_history) -> Number:
-        assert isinstance(credence_history, History)
+    def evaluate(self, credence_history: History) -> Number:
         return self.k
 
     def bound(self) -> Number:
@@ -73,7 +114,7 @@ class Constant(Formula):
 
 class Price(Formula):
     """
-    Looks up the price for a given sentence on a given day.
+    Looks up the price for a given sentence on a given update.
     """
     def __init__(self, sentence: Sentence, update_index: int):
         assert(update_index >= 1)  # indices are 1-based
@@ -81,19 +122,19 @@ class Price(Formula):
         self.update_index = update_index
 
     def evaluate(self, credence_history: History) -> Number:
-        return credence_history.lookup(self.sentence, self.day)
+        return credence_history.lookup(self.sentence, self.update_index)
 
     def bound(self) -> Number:
-        return 1   # because credences are always between 0 and 1
+        return Fraction(1, 1)   # because credences are always between 0 and 1
 
     def domain(self) -> set[Sentence]:
         return {self.sentence}
 
     def tree(self) -> str:
-        return "Price({}, {})".format(self.sentence, self.day)
+        return "Price({}, {})".format(self.sentence, self.update_index)
 
     def __str__(self) -> str:
-        return "price({}, {})".format(self.sentence, self.day)
+        return "price({}, {})".format(self.sentence, self.update_index)
 
     def __repr__(self) -> str:
         return str(self)
@@ -246,33 +287,3 @@ class SafeReciprocal(Formula):
 
     def __repr__(self) -> str:
         return str(self)
-
-
-
-def multiply(xs: list[any]) -> Number:
-    """Compute the product of the elements of a list, or return None if the list
-    is empty."""
-    result = None
-    for x in xs:
-        if result is None:
-            result = x
-        else:
-            result *= x
-    return result
-
-
-def parenthize(formula: Formula):
-    """Add parentheses around a formula if it is a sum or product formula."""
-    if isinstance(formula, (Sum, Product)):
-        return "(" + str(formula) + ")"
-    else:
-        return str(formula)
-
-
-def maketree(parent_label: str, children : list[Formula]) -> str:
-    """Construct a multi-line string representing the formula."""
-    s = parent_label
-    for child in children:
-        s += "\n. "
-        s += child.tree().replace("\n", "\n. ")
-    return s
