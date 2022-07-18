@@ -60,18 +60,18 @@ def find_credences(trading_policy, credence_history, tolerance, credence_search_
     search_domain = union(formula.domain() for formula in trading_policy.values()).union(support)
 
     # brute force search over all rational-valued credences between 0 and 1
-    for credences in credence_search_order(search_domain):
+    for credences in credence_search_order(search_domain):          # link: search_over_credences
         history = credence_history.with_next_update(credences)
 
         # check all possible worlds (all possible truth values for the support sentences)
         satisfied = True
-        for truth_values in itertools.product([0, 1], repeat=len(support)):
+        for truth_values in itertools.product([0, 1], repeat=len(support)):     # link: max_over_worlds
             world = {sentence: truth for sentence, truth in zip(support, truth_values)}
             value_of_holdings = evaluate(trading_policy, history, world)
 
             # there might not be any way to prevent our traders from losing money,
             # so there is no abs() in the below
-            if value_of_holdings > tolerance:
+            if value_of_holdings > tolerance:                         # link: tolerance_check
                 satisfied = False
                 break
 
@@ -163,7 +163,7 @@ def compute_budget_factor(
     # if we got this far then we have not already exceeded our budget, so now
     # compute the budget factor
     budget_divisors = []
-    for world in worlds_consistent_with(observations, support):
+    for world in worlds_consistent_with(observations, support):     # link: loop_over_consistent_worlds
         # compute our accumulated value in this world
         accumulated_value = 0
         for cur_trading_policy in trading_history:
@@ -273,7 +273,7 @@ def combine_trading_algorithms(trading_histories, observation_history, credence_
     # compute the terms that should be added together to produce the final
     # trading formula
     terms_by_sentence = collections.defaultdict(list)
-    for k, trading_history in enumerate(trading_histories):  # this is the loop over \Sum_{k<=n}
+    for k, trading_history in enumerate(trading_histories):  # link: loop_over_rows
         # zero out the first k entries
         clipped_trading_history = []
         for i, trading_formula in enumerate(trading_history):
@@ -304,7 +304,7 @@ def combine_trading_algorithms(trading_histories, observation_history, credence_
         # TODO: we can compute a better bound by using the N-1 belief states
         # that we have already observed in credence_history
 
-        for budget in range(1, net_value_bound+1):
+        for budget in range(1, net_value_bound+1):          # link: loop_over_columns
             budget_factor = compute_budget_factor(
                 budget,
                 observation_history[:-1],
@@ -315,7 +315,7 @@ def combine_trading_algorithms(trading_histories, observation_history, credence_
 
             for sentence, trading_expr in clipped_trading_history[-1].items():
                 weight = 2 ** (-k-1 - budget)
-                terms_by_sentence[sentence].append(formula.Product(
+                terms_by_sentence[sentence].append(formula.Product(         # link: apply_budget_transform
                     formula.Constant(weight),
                     budget_factor,
                     trading_expr))
@@ -333,7 +333,6 @@ def combine_trading_algorithms(trading_histories, observation_history, credence_
         for sentence, terms in terms_by_sentence.items()
     }
 
-    
 
 class LogicalInductor(object):
     def __init__(self):
@@ -368,17 +367,17 @@ class LogicalInductor(object):
         self._trading_histories.append(trading_history)
 
         # assemble the ensemble trader
-        ensemble_formula = combine_trading_algorithms(
+        ensemble_policy = combine_trading_algorithms(       # link: the_ensemble_policy
             self._trading_histories,
             self._observation_history,
             self._credence_history)
 
         # tolerances get tighter as we process more updates
-        tolerance = 2 ** -len(self._observation_history)
+        tolerance = 2 ** -len(self._observation_history)    # link: tolerance_schedule
 
         # find a set of credences not exploited by the compound trader
-        credences = find_credences(
-            ensemble_formula,
+        credences = find_credences(                         # link: find_the_credences
+            ensemble_policy,
             self._credence_history,
             tolerance,
             search_order)

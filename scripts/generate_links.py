@@ -2,12 +2,14 @@ import re
 import os
 import argparse
 
-function_pattern = re.compile("^def (\w+)")
-class_pattern = re.compile("^class (\w+)")
+patterns = [
+    re.compile("^def (\w+)"),       # function pattern
+    re.compile("^class (\w+)"),     # class pattern
+    re.compile(".*# link: (\w+)")     # comment pattern
+]
 
 html = """<!DOCTYPE html>
 <meta charset="utf-8">
-<title>Redirecting to {url}</title>
 <meta http-equiv="Refresh" content="0; URL={url}">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -24,8 +26,11 @@ def main():
     for path in args.sources:
         with open(path, "r") as f:
             for i, line in enumerate(f):
-                match = re.match(function_pattern, line) or re.match(class_pattern, line)
-                if match:
+                for pattern in patterns:
+                    match = re.match(pattern, line)
+                    if not match:
+                        continue
+
                     symbol = match.group(1)
                     if symbol.startswith("test_"):
                         continue
