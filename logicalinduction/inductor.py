@@ -255,7 +255,7 @@ def compute_budget_factor(
 def combine_trading_algorithms(trading_histories, observation_history, credence_history):
     """
     Given:
-     * A sequence of N generators over trading formulas (trading_algorithms)
+     * A sequence of N sequences of trading policies (trading_histories)
      * A sequence of N sentences (observation_history)
      * A sequence of N-1 belief states (credence_history)
     Returns:
@@ -276,16 +276,16 @@ def combine_trading_algorithms(trading_histories, observation_history, credence_
     for k, trading_history in enumerate(trading_histories):  # link: loop_over_rows
         # zero out the first k entries
         clipped_trading_history = []
-        for i, trading_formula in enumerate(trading_history):
+        for i, trading_policy in enumerate(trading_history):
             if i < k:
                 clipped_trading_history.append({})
             else:
-                clipped_trading_history.append(trading_formula)
+                clipped_trading_history.append(trading_policy)
 
         # compute an upper bound on the net value for this trading history
         net_value_bound = 0
-        for trading_formula in clipped_trading_history:
-            for sentence, trading_expr in trading_formula.items():
+        for trading_policy in clipped_trading_history:
+            for sentence, trading_expr in trading_policy.items():
                 # compute an upper bound on the absolute value of trading_expr,
                 # which is the quantity that we will purchase of this sentence
                 quantity_bound = trading_expr.bound()
@@ -326,8 +326,7 @@ def combine_trading_algorithms(trading_histories, observation_history, credence_
                 formula.Constant(weight),
                 trading_expr))
 
-    # create a trading formula for each sentence that is a sum of the terms
-    # computed above
+    # create a trading policy by summing over the terms above
     return {
         sentence: formula.Sum(*terms)
         for sentence, terms in terms_by_sentence.items()
