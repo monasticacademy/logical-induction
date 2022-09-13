@@ -34,3 +34,6 @@ dir:
 
 deps:
 	python -m pip install build twine  # for publishing to PyPI
+
+notebook:
+	python -m jupyter notebook notebooks/three_updates.ipynb
