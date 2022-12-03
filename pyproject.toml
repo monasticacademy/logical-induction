@@ -1,7 +1,7 @@
 [project]
 name = "logicalinduction"
-version = "0.1.4"
-authors = [{name="Kōshin Alex Flint", email="alex.flint@gmail.com"}]
+version = "0.1.5"
+authors = [{name="Kōshin Alex Flint", email="koshin@monasticacademy.org"}]
 description = "A computable algorithm for quantifying uncertainty"
 readme = "README.md"
 license = { file="LICENSE" }
@@ -17,8 +17,8 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project.urls]
-"Homepage" = "https://github.com/alexflint/logicalinduction"
-"Bug Tracker" = "https://github.com/alexflint/logicalinduction/issues"
+"Homepage" = "https://github.com/monasticacademy/logicalinduction"
+"Bug Tracker" = "https://github.com/monasticacademy/logicalinduction/issues"
 
 [tool.setuptools]
 packages = ["logicalinduction"]

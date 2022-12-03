@@ -1,4 +1,4 @@
-![Continuous integration](https://github.com/alexflint/logical-induction/actions/workflows/integrate.yaml/badge.svg)
+![Continuous integration](https://github.com/monasticacademy/logical-induction/actions/workflows/integrate.yaml/badge.svg)
 
 # Logical induction in Python
 
@@ -10,7 +10,7 @@ efficiency.
 
 To run the example code:
 ```bash
-$ git clone git@github.com:alexflint/logical-induction.git
+$ git clone git@github.com:monasticacademy/logical-induction.git
 $ cd logical-induction
 $ python examples/two_updates.py
 
