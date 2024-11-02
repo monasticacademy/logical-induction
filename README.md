@@ -2,11 +2,14 @@
 
 # Logical induction in Python
 
-This repository contains code to support the guide to logical induction for
-software engineers (which has not yet been published). It consists of a
-straightforward python implementation of the logical induction algorithm
-published by *Garrabrant et al* in 2018. I have prioritized simplicity over
-efficiency.
+This repository contains an implementation of a logical inductor in python.
+
+The code was written to support the article [logical induction for
+software engineers]([which has not yet been published](https://www.lesswrong.com/users/alexflint)). It consists of a
+python implementation of the logical induction algorithm
+published by *Garrabrant et al* in 2018.
+
+I have prioritized simplicity over efficiency.
 
 To run the example code:
 ```bash
