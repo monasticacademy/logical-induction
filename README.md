@@ -1,4 +1,4 @@
-![Continuous integration](https://github.com/monasticacademy/logical-induction/actions/workflows/integrate.yaml/badge.svg)
+![Continuous integration](https://github.com/monasticacademy/logical-induction/actions/workflows/build_and_test.yaml/badge.svg)
 
 # Logical induction in Python
 
